@@ -8,7 +8,7 @@
 #include "mgos_mqtt.h"
 #include "mgos_rpc.h"
 
-static int s_led_pin = 2;
+static int s_led_pin = 4;
 static bool s_led_state = false;
 
 // Publish sensor data over MQTT
