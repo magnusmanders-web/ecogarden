@@ -26,7 +26,7 @@ config_schema:
   - ["wifi.sta.ssid", "Skynet"]
   - ["wifi.sta.pass", "REDACTED"]
   - ["ecogarden", "o", {title: "EcoGarden settings"}]
-  - ["ecogarden.led_pin", "i", 2, {title: "LED GPIO pin"}]
+  - ["ecogarden.led_pin", "i", 4, {title: "LED GPIO pin"}]
   - ["ecogarden.sensor_interval_ms", "i", 5000, {title: "Sensor publish interval"}]
 
 libs:
