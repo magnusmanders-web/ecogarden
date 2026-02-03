@@ -1,0 +1,47 @@
+author: ecogarden-rescue
+description: Custom EcoGarden firmware with GPIO RPC
+version: 1.0.0
+
+libs_version: ${mos.version}
+modules_version: ${mos.version}
+mongoose_os_version: ${mos.version}
+
+tags:
+  - c
+  - hw
+
+sources:
+  - src
+
+filesystem:
+  - fs
+
+config_schema:
+  - ["mqtt.enable", true]
+  - ["mqtt.server", "192.168.1.5:1883"]
+  - ["rpc.enable", true]
+  - ["rpc.mqtt.enable", true]
+  - ["http.enable", true]
+  - ["wifi.sta.enable", true]
+  - ["wifi.sta.ssid", "Skynet"]
+  - ["wifi.sta.pass", "REDACTED"]
+  - ["ecogarden", "o", {title: "EcoGarden settings"}]
+  - ["ecogarden.led_pin", "i", 2, {title: "LED GPIO pin"}]
+  - ["ecogarden.sensor_interval_ms", "i", 5000, {title: "Sensor publish interval"}]
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/boards
+  - origin: https://github.com/mongoose-os-libs/ca-bundle
+  - origin: https://github.com/mongoose-os-libs/http-server
+  - origin: https://github.com/mongoose-os-libs/mqtt
+  - origin: https://github.com/mongoose-os-libs/rpc-common
+  - origin: https://github.com/mongoose-os-libs/rpc-service-config
+  - origin: https://github.com/mongoose-os-libs/rpc-service-fs
+  - origin: https://github.com/mongoose-os-libs/rpc-service-gpio
+  - origin: https://github.com/mongoose-os-libs/rpc-service-ota
+  - origin: https://github.com/mongoose-os-libs/rpc-uart
+  - origin: https://github.com/mongoose-os-libs/rpc-mqtt
+  - origin: https://github.com/mongoose-os-libs/wifi
+  - origin: https://github.com/mongoose-os-libs/ota-http-server
+
+manifest_version: 2017-09-29
