@@ -14,11 +14,21 @@ Custom firmware to revive EcoGarden (Kickstarter by Ecobloom) after their cloud 
 
 | Component | Status |
 |-----------|--------|
-| LED/Growlight | Working |
-| Light Sensor (TSL2561) | Working |
-| Water Temperature | Placeholder (sensor GPIO unknown) |
-| Feeder | Stub (servo GPIO unknown) |
+| LED/Growlight | Working (GPIO 4) |
+| Light Sensor (TSL2561) | Working (I2C 0x39) |
+| Water Temperature | Placeholder (sensor not found) |
+| Feeder | Not implemented (see below) |
 | Pump | Runs continuously (no control needed) |
+
+### Feeder Status
+
+Extensive investigation found no way to control the feeder:
+- Original firmware only contained LED control code
+- No motor driver ICs found on I2C bus
+- All available GPIO pins tested with no result
+- The [farstreet HA integration](https://github.com/farstreet/HA_ecobloom_ecogarden) notes Ecobloom was "still creating the endpoints"
+
+The feeder may have been cloud-only (GCP IoT Core) or controlled by separate hardware. The `/hooks/feed_now` endpoint exists but returns a stub response. If you discover the feeder GPIO, please open an issue or PR!
 
 ## Quick Start
 

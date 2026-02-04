@@ -73,14 +73,31 @@ curl http://192.168.1.196/rpc/I2C.Scan
 
 | Component | GPIO | Status |
 |-----------|------|--------|
-| LED/Growlight | 4 | Working (HIGH=on, code inverts for ESP8266) |
+| LED/Growlight | 4 | Working (HIGH=on) |
 | Button | 0 | Confirmed |
 | I2C SDA | 12 | Confirmed |
 | I2C SCL | 14 | Confirmed |
-| Pump | ? | Not found on GPIO 1,2,3,5,12,13,14,15,16 |
-| Feeder | ? | Not found on GPIO 1,2,3,5,12,13,14,15,16 |
-| Lux sensor | I2C 0x39 (57) | TSL2561 - working via /hooks/light_sensor |
-| Temp sensor | ? | Not on I2C - may be 1-Wire (DS18B20), placeholder value used |
+| Lux sensor | I2C 0x39 | TSL2561 - working via /hooks/light_sensor |
+| Pump | N/A | Runs continuously when powered, no control needed |
+| Feeder | Unknown | See investigation notes below |
+| Temp sensor | Unknown | Not on I2C, placeholder value used |
+
+### Feeder Investigation (2024-02)
+
+Extensive diagnostics found no feeder control:
+
+- **Original firmware** (`backup/init.js`, `backup/config.json`) only has LED control - no feeder code or GPIO
+- **I2C scan** found only TSL2561 (0x39) - no motor driver ICs
+- **GPIO tested**: 1,2,3,5,9,10,13,15,16 with servo PWM, DC pulses, active-low - nothing moved
+- **Web research**: [farstreet/HA_ecobloom_ecogarden](https://github.com/farstreet/HA_ecobloom_ecogarden) notes "Ecobloom is still creating the endpoints" - feeder may never have been fully implemented
+- **Ecobloom contact** (hello@ecobloom.se) - unresponsive
+
+**Likely scenarios:**
+1. Feeder was cloud-only (GCP IoT Core) with no local control
+2. Separate MCU controls feeder, not accessible from ESP8266
+3. Hardware not connected to accessible GPIO
+
+**Next step:** Photograph internals during tank maintenance to trace feeder wiring
 
 Device IP: 192.168.1.196 | MQTT broker: 192.168.1.5:1883
 
@@ -107,5 +124,7 @@ The config provides:
 
 ## TODO
 
-1. **Hardware discovery:** Find feeder servo GPIO (requires opening enclosure), find temp sensor (likely 1-Wire DS18B20)
-2. **Security:** Replace hardcoded WiFi credentials with BLE provisioning before GitHub release
+1. **Feeder:** Photograph internals during maintenance, trace feeder wiring to identify control method
+2. **Temp sensor:** May be 1-Wire DS18B20, not visible in tank
+3. **Security:** Replace hardcoded WiFi credentials with BLE provisioning before GitHub release
+4. **GitHub:** Create repo and push (mos.yml with credentials is gitignored)
