@@ -90,9 +90,22 @@ Custom settings in `mos.yml` under `ecogarden.*`:
 - `ecogarden.led_pin` (int, default 4)
 - `ecogarden.sensor_interval_ms` (int, default 5000)
 
+## Home Assistant Setup
+
+```bash
+cd homeassistant
+docker compose up -d
+# Access at http://localhost:8123
+```
+
+The config provides:
+- Light sensor (0-100%)
+- Water temperature sensor
+- Growlight on/off control
+- Feed fish button (stub until GPIO found)
+- Auto brightness toggle
+
 ## TODO
 
-1. **Hardware discovery:** Find pump/feeder GPIOs (not on any tested GPIO), find temp sensor (likely 1-Wire)
-2. **Complete firmware:** Add pump/feeder control once GPIOs found, add real temp sensor reading
-3. **Home Assistant:** Configure using farstreet/HA_ecobloom_ecogarden as template
-4. **Security:** Replace hardcoded WiFi credentials with BLE provisioning
+1. **Hardware discovery:** Find feeder servo GPIO (requires opening enclosure), find temp sensor (likely 1-Wire DS18B20)
+2. **Security:** Replace hardcoded WiFi credentials with BLE provisioning before GitHub release
