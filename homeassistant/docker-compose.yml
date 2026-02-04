@@ -1,0 +1,17 @@
+# Home Assistant for EcoGarden
+# Start: docker compose up -d
+# Access: http://localhost:8123
+
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    # Linux/NAS: use network_mode: host for mDNS device discovery
+    # macOS: use ports mapping (mDNS won't work in Docker on Mac)
+    network_mode: host
+    # ports:
+    #   - "8123:8123"

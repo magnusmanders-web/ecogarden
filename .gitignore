@@ -2,8 +2,19 @@
 firmware/build/
 firmware/deps/
 
+# Keep mos.yml out of version control (contains credentials)
+# Use mos.yml.example as template
+firmware/mos.yml
+
+# Home Assistant runtime files
+homeassistant/config/.storage/
+homeassistant/config/home-assistant_v2.db
+homeassistant/config/home-assistant.log
+homeassistant/config/.homeassistant/
+
 # OS files
 .DS_Store
+Thumbs.db
 
 # IDE
 .idea/
