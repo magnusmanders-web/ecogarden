@@ -108,20 +108,31 @@ curl http://192.168.1.196/rpc/I2C.Scan
 | Feeder | Unknown | See investigation notes below |
 | Temp sensor | Unknown | Not on I2C, placeholder value used |
 
-### Feeder Investigation (2024-02)
+### Feeder Investigation (Feb 2026)
 
-Extensive diagnostics found no feeder control:
+**APK Analysis (EcoGarden App v1.2):**
+Decompiled the Android app and found the feeder control architecture:
 
+```
+App → Firebase → GCP IoT Core → MQTT → ESP8266 → GPIO → Feeder
+```
+
+Firebase paths used:
+- `device/{deviceId}/component/feeder/feed_now` = true (triggers feed)
+- `device/{deviceId}/component/feeder/schedule` (feeding schedule)
+- `device/{deviceId}/component/feeder/automatic_feeding` (auto mode)
+- `device/{deviceId}/component/feeder/history` (feed history)
+
+**Key finding:** No local `/hooks/feed_now` endpoint ever existed in the original firmware. The feeder was **cloud-only** via Firebase/GCP IoT Core. The endpoint was "still being created" according to farstreet repo - it was never finished.
+
+**Device-level testing:**
 - **Original firmware** (`backup/init.js`, `backup/config.json`) only has LED control - no feeder code or GPIO
-- **I2C scan** found only TSL2561 (0x39) - no motor driver ICs
+- **I2C scan** found only TSL2561 (0x39) - no motor driver ICs at common addresses (0x0F, 0x20-0x27, 0x38-0x3F, 0x40, 0x60, 0x68)
 - **GPIO tested**: 1,2,3,5,9,10,13,15,16 with servo PWM, DC pulses, active-low - nothing moved
-- **Web research**: [farstreet/HA_ecobloom_ecogarden](https://github.com/farstreet/HA_ecobloom_ecogarden) notes "Ecobloom is still creating the endpoints" - feeder may never have been fully implemented
+- **OTA revert**: Slot 0 checked but original firmware not recoverable
 - **Ecobloom contact** (hello@ecobloom.se) - unresponsive
 
-**Likely scenarios:**
-1. Feeder was cloud-only (GCP IoT Core) with no local control
-2. Separate MCU controls feeder, not accessible from ESP8266
-3. Hardware not connected to accessible GPIO
+**Conclusion:** The original firmware binary (which contained the GPIO→feeder mapping) was overwritten when we flashed custom firmware. The GPIO pin cannot be recovered via software. Physical inspection required.
 
 **Next step:** Photograph internals during tank maintenance to trace feeder wiring
 
