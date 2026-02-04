@@ -6,6 +6,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was decommissioned. Custom Mongoose OS firmware restores local control via HTTP RPC and MQTT.
 
+**GitHub:** https://github.com/magnusmanders-web/ecogarden
+
+## Device Info
+
+- **Device ID:** esp8266_5A604B
+- **MAC:** 8EAAB55A604B
+- **IP:** 192.168.1.196
+- **Firmware:** v1.1.0 (custom Mongoose OS 2.20.0)
+- **MQTT broker:** 192.168.1.5:1883
+- **WiFi:** Skynet (credentials in mos.yml, gitignored)
+
+## Current Status (Feb 2026)
+
+**Working:**
+- LED/Growlight control (GPIO 4) via HTTP and MQTT
+- Light sensor (TSL2561 on I2C 0x39) - real lux values
+- Home Assistant integration at ~/homeassistant
+- OTA firmware updates via /update endpoint
+
+**Not working / Unknown:**
+- Feeder servo - GPIO unknown, extensive testing failed (see investigation below)
+- Temperature sensor - not on I2C, likely 1-Wire DS18B20, returns placeholder 24.75°C
+
+**Not needed:**
+- Pump - runs continuously when powered, no control required
+
 ## Architecture
 
 ```
@@ -126,5 +152,28 @@ The config provides:
 
 1. **Feeder:** Photograph internals during maintenance, trace feeder wiring to identify control method
 2. **Temp sensor:** May be 1-Wire DS18B20, not visible in tank
-3. **Security:** Replace hardcoded WiFi credentials with BLE provisioning before GitHub release
-4. **GitHub:** Create repo and push (mos.yml with credentials is gitignored)
+3. **Security:** Replace hardcoded WiFi credentials with BLE provisioning
+
+## When Photos Are Available
+
+When you have photos of the internals, look for and document:
+
+1. **Main PCB** - Identify ESP8266 module, trace all wires
+2. **Feeder motor** - What type? (servo with 3 wires, DC motor with 2, stepper with 4+)
+3. **Motor driver** - Any IC near the motor? (L298N, DRV8833, TB6612, etc.)
+4. **Secondary PCB** - Is there another microcontroller board?
+5. **Wire colors** - Which wires go from feeder to main board, and to which pins?
+6. **Temp sensor** - Look for small probe with 3 wires (DS18B20) or 2 wires (thermistor)
+
+**To add feeder support once GPIO is found:**
+1. Edit `firmware/src/main.c` - add GPIO control in `hook_feed_now()` function (line ~209)
+2. Add to `mos.yml` config schema: `ecogarden.feeder_pin`
+3. Build and OTA flash: `cd firmware && mos build --platform esp8266 && curl -F "file=@build/fw.zip" http://192.168.1.196/update`
+
+## Home Assistant Location
+
+Main HA setup (with all your devices): `~/homeassistant`
+Example HA config for EcoGarden: `./homeassistant/` (in this repo)
+
+Start HA: `cd ~/homeassistant && docker compose up -d`
+Access: http://localhost:8123
