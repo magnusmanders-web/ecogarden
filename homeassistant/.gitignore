@@ -1,0 +1,20 @@
+# Home Assistant storage (contains auth tokens, credentials)
+config/.storage/
+config/*.db
+config/*.log
+
+# InfluxDB data
+influxdb/
+
+# Grafana data
+grafana/data/
+
+# Secrets
+config/secrets.yaml
+
+# Backups
+config/backups/
+
+# Temporary files
+*.tmp
+*.bak

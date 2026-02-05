@@ -1,118 +1,90 @@
-# Home Assistant Configuration for EcoGarden
-# See: https://www.home-assistant.io/docs/configuration/
+# Home Assistant Configuration
+# Start: cd ~/homeassistant && docker compose up -d
+# Access: http://localhost:8123
 
 homeassistant:
   name: Home
   unit_system: metric
-  time_zone: Europe/Oslo
+  time_zone: Europe/Stockholm
+  country: "SE"
 
-# Enable default config (frontend, history, logbook, etc.)
+# Loads default set of integrations. Do not remove.
 default_config:
 
-# EcoGarden sensor configuration
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+# Custom dashboard
+lovelace:
+  mode: storage
+  dashboards:
+    lovelace-home:
+      mode: yaml
+      title: Home Dashboard
+      icon: mdi:home-assistant
+      show_in_sidebar: true
+      filename: ui-lovelace.yaml
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# ===== EcoGarden Integration =====
+# Custom firmware endpoints at http://192.168.1.196
+
 sensor:
   - platform: rest
     name: EcoGarden Light Level
-    resource: http://YOUR_ECOGARDEN_IP/hooks/light_sensor
+    resource: http://192.168.1.196/hooks/light_sensor
     value_template: "{{ (value_json.value * 100) | round(1) }}"
     unit_of_measurement: "%"
     scan_interval: 30
 
   - platform: rest
     name: EcoGarden Water Temperature
-    resource: http://YOUR_ECOGARDEN_IP/hooks/water_temperature
+    resource: http://192.168.1.196/hooks/water_temperature
     value_template: "{{ value_json.value | round(1) }}"
     unit_of_measurement: "°C"
     device_class: temperature
     scan_interval: 60
 
-# EcoGarden light (growlight) control
+rest_command:
+  ecogarden_led_on:
+    url: "http://192.168.1.196/hooks/set_led_brightness?value=1"
+  ecogarden_led_off:
+    url: "http://192.168.1.196/hooks/set_led_brightness?value=0"
+  ecogarden_set_brightness:
+    url: "http://192.168.1.196/hooks/set_led_brightness?value={{ brightness }}"
+  ecogarden_feed:
+    url: "http://192.168.1.196/hooks/feed_now"
+
+# EcoGarden light as a template light entity
 light:
   - platform: template
     lights:
       ecogarden_growlight:
         friendly_name: "EcoGarden Growlight"
-        value_template: "{{ states('input_boolean.ecogarden_led_state') }}"
         turn_on:
           service: rest_command.ecogarden_led_on
         turn_off:
           service: rest_command.ecogarden_led_off
-        set_level:
-          service: rest_command.ecogarden_set_brightness
-          data:
-            brightness: "{{ (brightness / 255) | round(2) }}"
 
-# EcoGarden REST commands
-rest_command:
-  ecogarden_led_on:
-    url: "http://YOUR_ECOGARDEN_IP/hooks/set_led_brightness?value=1"
-    method: GET
-
-  ecogarden_led_off:
-    url: "http://YOUR_ECOGARDEN_IP/hooks/set_led_brightness?value=0"
-    method: GET
-
-  ecogarden_set_brightness:
-    url: "http://YOUR_ECOGARDEN_IP/hooks/set_led_brightness?value={{ brightness }}"
-    method: GET
-
-  ecogarden_auto_brightness_on:
-    url: "http://YOUR_ECOGARDEN_IP/hooks/set_automatic_led_brightness?value=1"
-    method: GET
-
-  ecogarden_auto_brightness_off:
-    url: "http://YOUR_ECOGARDEN_IP/hooks/set_automatic_led_brightness?value=0"
-    method: GET
-
-  ecogarden_feed:
-    url: "http://YOUR_ECOGARDEN_IP/hooks/feed_now"
-    method: GET
-
-# Track LED and auto brightness state
-input_boolean:
-  ecogarden_led_state:
-    name: EcoGarden LED State
-    initial: off
-  ecogarden_auto_brightness:
-    name: EcoGarden Auto Brightness
-    initial: off
-
-# Automations to sync LED state
-automation:
-  - alias: "EcoGarden LED On - Update State"
-    trigger:
-      platform: event
-      event_type: call_service
-      event_data:
-        domain: rest_command
-        service: ecogarden_led_on
-    action:
-      service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.ecogarden_led_state
-
-  - alias: "EcoGarden LED Off - Update State"
-    trigger:
-      platform: event
-      event_type: call_service
-      event_data:
-        domain: rest_command
-        service: ecogarden_led_off
-    action:
-      service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.ecogarden_led_state
-
-# Scripts for easy dashboard access
-script:
-  ecogarden_feed_fish:
-    alias: "Feed Fish"
-    sequence:
-      - service: rest_command.ecogarden_feed
-
-  ecogarden_toggle_auto_brightness:
-    alias: "Toggle Auto Brightness"
-    sequence:
-      - service: input_boolean.toggle
-        target:
-          entity_id: input_boolean.ecogarden_auto_brightness
+# ===== InfluxDB for Grafana =====
+influxdb:
+  api_version: 2
+  host: influxdb
+  port: 8086
+  token: ecogarden-influx-token-2024
+  organization: home
+  bucket: homeassistant
+  ssl: false
+  include:
+    entity_globs:
+      - sensor.ecogarden_*
+      - light.ecogarden_*
+      - sensor.tibber_*
+    domains:
+      - sensor
+      - light
+      - climate
