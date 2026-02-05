@@ -15,7 +15,7 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 - **IP:** 192.168.1.196
 - **Firmware:** v1.1.0 (custom Mongoose OS 2.20.0)
 - **MQTT broker:** 192.168.1.5:1883
-- **WiFi:** Skynet (credentials in mos.yml, gitignored)
+- **WiFi:** Configured via web portal (no hardcoded credentials)
 
 ## Current Status (Feb 2026)
 
@@ -159,11 +159,31 @@ The config provides:
 - Feed fish button (stub until GPIO found)
 - Auto brightness toggle
 
+## WiFi Provisioning
+
+The firmware now supports WiFi configuration via a captive portal - no hardcoded credentials needed.
+
+**First-time setup:**
+1. Device creates WiFi hotspot: `EcoGarden-Setup` (password: `ecogarden`)
+2. Connect to the hotspot with your phone/laptop
+3. Open http://192.168.4.1 in browser
+4. Select your WiFi network and enter password
+5. Device reboots and connects to your network
+6. AP automatically turns off when connected
+
+**To reconfigure WiFi:**
+- If device can't connect (e.g., wrong password, network changed), it falls back to AP mode after 15 seconds
+- Or factory reset: Connect via serial and run `mos config-set wifi.sta.ssid="" wifi.sta.pass=""`
+
+**AP Mode settings (mos.yml):**
+- SSID: `EcoGarden-Setup`
+- Password: `ecogarden`
+- IP: `192.168.4.1`
+
 ## TODO
 
 1. **Feeder:** Photograph internals during maintenance, trace feeder wiring to identify control method
 2. **Temp sensor:** May be 1-Wire DS18B20, not visible in tank
-3. **Security:** Replace hardcoded WiFi credentials with BLE provisioning
 
 ## When Photos Are Available
 
