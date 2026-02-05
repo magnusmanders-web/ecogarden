@@ -28,13 +28,19 @@ config_schema:
   - ["wifi.sta.enable", true]
   - ["wifi.sta.ssid", "Skynet"]
   - ["wifi.sta.pass", "REDACTED"]
+  - ["uart.uart1.baud_rate", 9600]
+  - ["uart.uart1.rx_gpio", 13]
+  - ["uart.uart1.tx_gpio", 15]
   - ["ecogarden", "o", {title: "EcoGarden settings"}]
   - ["ecogarden.led_pin", "i", 4, {title: "LED GPIO pin"}]
   - ["ecogarden.sensor_interval_ms", "i", 5000, {title: "Sensor publish interval"}]
+  - ["ecogarden.mcu_uart", "i", 1, {title: "UART number for MCU communication"}]
+  - ["ecogarden.onewire_pin", "i", 5, {title: "1-Wire GPIO pin for DS18B20"}]
 
 libs:
   - origin: https://github.com/mongoose-os-libs/boards
   - origin: https://github.com/mongoose-os-libs/ca-bundle
+  - origin: https://github.com/mongoose-os-libs/core
   - origin: https://github.com/mongoose-os-libs/i2c
   - origin: https://github.com/mongoose-os-libs/rpc-service-i2c
   - origin: https://github.com/mongoose-os-libs/http-server
