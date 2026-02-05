@@ -35,17 +35,6 @@ The feeder may have been cloud-only (GCP IoT Core) or controlled by separate har
 ### Prerequisites
 
 - [Mongoose OS mos tool](https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md)
-- Device connected to your WiFi network
-
-### Configure WiFi
-
-Edit `firmware/mos.yml` and set your WiFi credentials:
-
-```yaml
-config_schema:
-  - ["wifi.sta.ssid", "YOUR_SSID"]
-  - ["wifi.sta.pass", "YOUR_PASSWORD"]
-```
 
 ### Build and Flash
 
@@ -53,9 +42,22 @@ config_schema:
 cd firmware
 mos build --platform esp8266
 
-# OTA flash (replace IP with your device's IP)
-curl -F "file=@build/fw.zip" http://YOUR_DEVICE_IP/update
+# OTA flash (if device is already on your network)
+curl -X POST -F "filedata=@build/fw.zip;type=application/zip" http://DEVICE_IP/update
 ```
+
+For serial flashing (new device or bricked), see [docs/FLASHING.md](docs/FLASHING.md).
+
+### Configure WiFi
+
+The firmware includes a WiFi provisioning portal - no need to edit config files!
+
+1. **Connect to the device's hotspot:** `EcoGarden-Setup` (password: `ecogarden`)
+2. **Open** http://192.168.4.1 in your browser
+3. **Select your WiFi network** and enter password
+4. **Save** - device reboots and connects to your network
+
+The AP automatically turns off once connected. If connection fails, it falls back to AP mode after 15 seconds.
 
 ## API Reference
 
