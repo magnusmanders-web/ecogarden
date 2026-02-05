@@ -1,17 +1,54 @@
-# Home Assistant for EcoGarden
-# Start: docker compose up -d
-# Access: http://localhost:8123
-
 services:
   homeassistant:
     container_name: homeassistant
     image: ghcr.io/home-assistant/home-assistant:stable
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Oslo
     volumes:
       - ./config:/config
       - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
+    depends_on:
+      - influxdb
+    # Note: On macOS, mDNS discovery won't work automatically.
+    # You'll need to manually enter IP addresses for Hue Bridge, IKEA Gateway, etc.
+    # When moving to NAS/Linux, change to network_mode: host for auto-discovery.
+
+  # InfluxDB - Time series database for sensor history
+  influxdb:
+    container_name: influxdb
+    image: influxdb:2.7
     restart: unless-stopped
-    # Linux/NAS: use network_mode: host for mDNS device discovery
-    # macOS: use ports mapping (mDNS won't work in Docker on Mac)
-    network_mode: host
-    # ports:
-    #   - "8123:8123"
+    environment:
+      - TZ=Europe/Oslo
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=ecogarden123
+      - DOCKER_INFLUXDB_INIT_ORG=home
+      - DOCKER_INFLUXDB_INIT_BUCKET=homeassistant
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=ecogarden-influx-token-2024
+    volumes:
+      - ./influxdb/data:/var/lib/influxdb2
+      - ./influxdb/config:/etc/influxdb2
+    ports:
+      - "8086:8086"
+
+  # Grafana - Visualization dashboards
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Stockholm
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=ecogarden
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    depends_on:
+      - influxdb
