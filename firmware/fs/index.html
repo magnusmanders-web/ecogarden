@@ -1,5 +1,175 @@
+<!DOCTYPE html>
 <html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoGarden Setup</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { margin: 0; padding: 20px; background: linear-gradient(135deg, #1a5f2a 0%, #2d8f4e 100%); min-height: 100vh; }
+    .container { max-width: 400px; margin: 0 auto; }
+    .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    h1 { color: #1a5f2a; margin: 0 0 8px 0; font-size: 24px; }
+    .subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
+    .status { padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+    .status.connected { background: #d4edda; color: #155724; }
+    .status.disconnected { background: #fff3cd; color: #856404; }
+    label { display: block; margin-bottom: 6px; font-weight: 500; color: #333; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 16px; }
+    input:focus { border-color: #2d8f4e; outline: none; }
+    button { width: 100%; padding: 14px; background: #2d8f4e; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #1a5f2a; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .networks { margin-bottom: 16px; }
+    .network { padding: 10px 12px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; }
+    .network:hover { border-color: #2d8f4e; background: #f8fff8; }
+    .network.selected { border-color: #2d8f4e; background: #e8f5e9; }
+    .signal { color: #666; font-size: 14px; }
+    .refresh { background: none; border: 1px solid #2d8f4e; color: #2d8f4e; padding: 8px 16px; width: auto; margin-bottom: 16px; }
+    .refresh:hover { background: #f8fff8; }
+    .msg { padding: 12px; border-radius: 8px; margin-top: 16px; display: none; }
+    .msg.success { background: #d4edda; color: #155724; display: block; }
+    .msg.error { background: #f8d7da; color: #721c24; display: block; }
+    .advanced { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+    .advanced summary { cursor: pointer; color: #666; font-size: 14px; }
+  </style>
+</head>
 <body>
-  <h1>Welcome to the empty project</h1>
+  <div class="container">
+    <div class="card">
+      <h1>EcoGarden Setup</h1>
+      <p class="subtitle">Configure WiFi to connect your EcoGarden</p>
+
+      <div id="status" class="status disconnected">Checking connection...</div>
+
+      <div id="wifi-form">
+        <button class="refresh" onclick="scanNetworks()">Scan for Networks</button>
+
+        <div id="networks" class="networks"></div>
+
+        <label for="ssid">WiFi Network Name (SSID)</label>
+        <input type="text" id="ssid" placeholder="Enter network name">
+
+        <label for="pass">WiFi Password</label>
+        <input type="password" id="pass" placeholder="Enter password">
+
+        <button onclick="saveWifi()">Connect to WiFi</button>
+
+        <div id="msg" class="msg"></div>
+
+        <details class="advanced">
+          <summary>Advanced Settings</summary>
+          <br>
+          <label for="mqtt">MQTT Server (optional)</label>
+          <input type="text" id="mqtt" placeholder="192.168.1.5:1883">
+          <button onclick="saveMqtt()">Save MQTT</button>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function checkStatus() {
+      fetch('/rpc/Wifi.GetStatus')
+        .then(r => r.json())
+        .then(d => {
+          const el = document.getElementById('status');
+          if (d.sta_ip) {
+            el.className = 'status connected';
+            el.innerHTML = 'Connected to <b>' + d.ssid + '</b><br>IP: ' + d.sta_ip;
+          } else if (d.status === 'connecting') {
+            el.className = 'status disconnected';
+            el.textContent = 'Connecting to ' + d.ssid + '...';
+          } else {
+            el.className = 'status disconnected';
+            el.textContent = 'Not connected - Please configure WiFi below';
+          }
+        })
+        .catch(() => {
+          document.getElementById('status').textContent = 'Ready to configure';
+        });
+    }
+
+    function scanNetworks() {
+      const container = document.getElementById('networks');
+      container.innerHTML = '<div style="color:#666;padding:10px;">Scanning...</div>';
+
+      fetch('/rpc/Wifi.Scan')
+        .then(r => r.json())
+        .then(networks => {
+          if (!networks || networks.length === 0) {
+            container.innerHTML = '<div style="color:#666;padding:10px;">No networks found</div>';
+            return;
+          }
+          container.innerHTML = networks.map(n =>
+            '<div class="network" onclick="selectNetwork(\'' + n.ssid.replace(/'/g, "\\'") + '\')">' +
+            '<span>' + n.ssid + '</span>' +
+            '<span class="signal">' + n.rssi + ' dBm</span>' +
+            '</div>'
+          ).join('');
+        })
+        .catch(e => {
+          container.innerHTML = '<div style="color:#c00;padding:10px;">Scan failed: ' + e.message + '</div>';
+        });
+    }
+
+    function selectNetwork(ssid) {
+      document.getElementById('ssid').value = ssid;
+      document.querySelectorAll('.network').forEach(el => el.classList.remove('selected'));
+      event.target.closest('.network').classList.add('selected');
+    }
+
+    function showMsg(text, isError) {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + (isError ? 'error' : 'success');
+    }
+
+    function saveWifi() {
+      const ssid = document.getElementById('ssid').value;
+      const pass = document.getElementById('pass').value;
+
+      if (!ssid) {
+        showMsg('Please enter a network name', true);
+        return;
+      }
+
+      fetch('/rpc/Config.Set', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({config: {wifi: {sta: {ssid: ssid, pass: pass, enable: true}}}})
+      })
+      .then(r => r.json())
+      .then(() => {
+        return fetch('/rpc/Config.Save', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({reboot: true})
+        });
+      })
+      .then(() => {
+        showMsg('WiFi saved! Device is rebooting and will connect to ' + ssid + '. If successful, the AP will turn off.', false);
+      })
+      .catch(e => {
+        showMsg('Error: ' + e.message, true);
+      });
+    }
+
+    function saveMqtt() {
+      const mqtt = document.getElementById('mqtt').value;
+
+      fetch('/rpc/Config.Set', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({config: {mqtt: {server: mqtt, enable: mqtt ? true : false}}})
+      })
+      .then(() => fetch('/rpc/Config.Save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}))
+      .then(() => showMsg('MQTT settings saved!', false))
+      .catch(e => showMsg('Error: ' + e.message, true));
+    }
+
+    checkStatus();
+    setInterval(checkStatus, 5000);
+  </script>
 </body>
 </html>
