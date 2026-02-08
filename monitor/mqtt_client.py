@@ -18,7 +18,7 @@ class MQTTClient:
         self.ecogarden_topic = config["mqtt"]["ecogarden_topic"]
         self.publish_topic = config["mqtt"]["publish_topic"]
 
-        self._sensor_data = {"lux": None, "temp_c": None}
+        self._sensor_data = {"temp_c": None}
         self._lock = threading.Lock()
         self._connected = False
 
@@ -51,12 +51,6 @@ class MQTTClient:
             return
 
         with self._lock:
-            if "lux" in payload:
-                self._sensor_data["lux"] = payload["lux"]
-            if "light" in payload:
-                # EcoGarden sends light as 0.0-1.0, convert to approximate lux
-                # TSL2561 max is ~40000 lux, sensor value is normalized
-                self._sensor_data["lux"] = round(payload["light"] * 40000, 1)
             if "temp" in payload:
                 self._sensor_data["temp_c"] = payload["temp"]
             if "temperature" in payload:

@@ -45,8 +45,6 @@ def _build_prompt(plants, sensors, herbs, previous):
         )
 
     sensor_lines = []
-    if sensors.get("lux") is not None:
-        sensor_lines.append(f"- Light: {sensors['lux']} lux")
     if sensors.get("temp_c") is not None:
         sensor_lines.append(f"- Water temp: {sensors['temp_c']}C")
 

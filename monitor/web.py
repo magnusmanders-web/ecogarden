@@ -45,7 +45,6 @@ def create_app(config, state):
 
             advice = get_care_advice(
                 plant["species"], age,
-                lux=sensors.get("lux"),
                 temp_c=sensors.get("temp_c"),
             )
 
