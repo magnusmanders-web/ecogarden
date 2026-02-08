@@ -37,12 +37,12 @@ class MQTTClient:
             client.subscribe(self.ecogarden_topic)
             log.info("Subscribed to %s", self.ecogarden_topic)
         else:
-            log.error("MQTT connection failed with code %d", rc)
+            log.error("MQTT connection failed with code %s", rc)
 
     def _on_disconnect(self, client, userdata, flags, rc, properties=None):
         self._connected = False
         if rc != 0:
-            log.warning("Unexpected MQTT disconnect (rc=%d), will reconnect", rc)
+            log.warning("Unexpected MQTT disconnect (rc=%s), will reconnect", rc)
 
     def _on_message(self, client, userdata, msg):
         try:
