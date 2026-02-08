@@ -19,6 +19,7 @@ capture:
   end_hour: 22
   resolution: "1920x1080"
   quality: 85
+  rotation: 180
 
 timelapse:
   daily_time: "22:30"
