@@ -2,90 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EcoGarden Plant Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a5f2a">
+  <title>EcoGarden</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
     <div class="header-content">
-      <h1>EcoGarden Plant Monitor</h1>
-      <div class="header-status">
-        <span id="mqtt-status" class="status-badge disconnected">MQTT</span>
-        <span id="last-update" class="last-update"></span>
+      <div class="header-left">
+        <h1>EcoGarden</h1>
+        <span id="mqtt-status" class="status-dot disconnected"></span>
+      </div>
+      <div class="header-right">
+        <button id="capture-btn" class="header-btn" onclick="manualCapture()">Capture</button>
       </div>
     </div>
   </header>
 
   <main>
-    <!-- Sensor Sidebar -->
-    <aside class="sensor-sidebar">
-      <div class="sensor-card">
-        <div class="sensor-label">Light Level</div>
-        <div class="sensor-value" id="sensor-lux">--</div>
-        <div class="sensor-unit">lux</div>
+    <!-- Sensor bar -->
+    <div class="sensor-bar">
+      <div class="sensor-item">
+        <span class="sensor-val" id="sensor-lux">--</span>
+        <span class="sensor-lbl">lux</span>
       </div>
-      <div class="sensor-card">
-        <div class="sensor-label">Water Temp</div>
-        <div class="sensor-value" id="sensor-temp">--</div>
-        <div class="sensor-unit">&deg;C</div>
+      <div class="sensor-divider"></div>
+      <div class="sensor-item">
+        <span class="sensor-val" id="sensor-temp">--</span>
+        <span class="sensor-lbl">&deg;C</span>
       </div>
-      <div class="sensor-card">
-        <div class="sensor-label">Overall Health</div>
-        <div class="sensor-value health-score" id="overall-health">--</div>
-        <div class="sensor-unit">/ 5</div>
+      <div class="sensor-divider"></div>
+      <div class="sensor-item">
+        <span class="sensor-val health-score" id="overall-health">--</span>
+        <span class="sensor-lbl">health</span>
       </div>
-      <div id="alerts-container" class="alerts-container" style="display:none;">
-        <div class="sensor-label">Alerts</div>
-        <div id="alerts-list"></div>
-      </div>
-    </aside>
-
-    <div class="content">
-      <!-- Latest Photo -->
-      <section class="photo-section">
-        <div class="section-header">
-          <h2>Latest Capture</h2>
-          <button id="capture-btn" class="btn btn-small" onclick="manualCapture()">Capture Now</button>
-        </div>
-        <div class="photo-main">
-          <img id="latest-photo" src="" alt="Latest plant photo" onclick="openFullscreen(this)">
-          <div id="photo-no-data" class="no-data">No photos captured yet</div>
-        </div>
-        <div class="thumbnail-strip" id="thumbnail-strip"></div>
-      </section>
-
-      <!-- Timelapse -->
-      <section class="timelapse-section">
-        <div class="section-header">
-          <h2>Timelapse</h2>
-          <div class="timelapse-controls">
-            <select id="timelapse-type" onchange="loadTimelapses()">
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-            <select id="timelapse-select" onchange="playTimelapse()"></select>
-          </div>
-        </div>
-        <div class="timelapse-player">
-          <video id="timelapse-video" controls>
-            <source src="" type="video/mp4">
-          </video>
-          <div id="timelapse-no-data" class="no-data">No timelapses available yet</div>
-        </div>
-      </section>
-
-      <!-- Plant Cards -->
-      <section class="plants-section">
-        <h2>Plants</h2>
-        <div id="ai-summary" class="ai-summary" style="display:none;">
-          <span class="ai-badge">AI Analysis</span>
-          <span id="ai-summary-text"></span>
-          <span id="ai-summary-date" class="ai-date"></span>
-        </div>
-        <div class="plant-cards" id="plant-cards"></div>
-      </section>
     </div>
+
+    <!-- Alerts -->
+    <div id="alerts-container" class="alerts-container" style="display:none;">
+      <div id="alerts-list"></div>
+    </div>
+
+    <!-- Latest Photo -->
+    <section class="card photo-card">
+      <div class="photo-frame">
+        <img id="latest-photo" src="" alt="Latest plant photo" onclick="openFullscreen(this)">
+        <div id="photo-no-data" class="no-data">No photos yet</div>
+        <span id="photo-time" class="photo-time"></span>
+      </div>
+      <div class="thumbnail-strip" id="thumbnail-strip"></div>
+    </section>
+
+    <!-- AI Summary -->
+    <section id="ai-summary" class="card ai-card" style="display:none;">
+      <div class="ai-header">
+        <span class="ai-badge">AI</span>
+        <span id="ai-summary-date" class="ai-date"></span>
+      </div>
+      <p id="ai-summary-text" class="ai-text"></p>
+    </section>
+
+    <!-- Plant Cards -->
+    <section class="plants-section">
+      <div id="plant-cards"></div>
+    </section>
+
+    <!-- Timelapse -->
+    <section class="card timelapse-card">
+      <div class="card-header">
+        <h2>Timelapse</h2>
+        <div class="timelapse-controls">
+          <select id="timelapse-type" onchange="loadTimelapses()">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+          <select id="timelapse-select" onchange="playTimelapse()"></select>
+        </div>
+      </div>
+      <div class="timelapse-player">
+        <video id="timelapse-video" controls playsinline>
+          <source src="" type="video/mp4">
+        </video>
+        <div id="timelapse-no-data" class="no-data">No timelapses yet</div>
+      </div>
+    </section>
   </main>
 
   <!-- Fullscreen overlay -->
