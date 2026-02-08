@@ -447,29 +447,171 @@ h2 {
 
 /* Responsive */
 @media (max-width: 768px) {
-  main {
-    grid-template-columns: 1fr;
-    padding: 12px;
+  header {
+    padding: 12px 16px;
   }
 
+  .header-content {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  header h1 {
+    font-size: 16px;
+  }
+
+  .last-update {
+    display: none;
+  }
+
+  main {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 12px;
+  }
+
+  /* Sensors as compact horizontal strip */
   .sensor-sidebar {
     flex-direction: row;
-    flex-wrap: wrap;
     position: static;
+    gap: 8px;
+    order: -1;
   }
 
   .sensor-card {
     flex: 1;
-    min-width: 100px;
+    min-width: 0;
+    padding: 10px 6px;
   }
 
+  .sensor-value {
+    font-size: 20px;
+  }
+
+  .sensor-label {
+    font-size: 9px;
+  }
+
+  .sensor-unit {
+    font-size: 10px;
+  }
+
+  .alerts-container {
+    flex-basis: 100%;
+  }
+
+  /* Photo section */
+  .section-header {
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    font-size: 16px;
+  }
+
+  .thumbnail-strip {
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .thumbnail-strip img {
+    width: 60px;
+    height: 40px;
+    border-radius: 4px;
+  }
+
+  /* Timelapse */
+  .timelapse-section .section-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .timelapse-controls {
+    width: 100%;
+  }
+
+  .timelapse-controls select {
+    flex: 1;
+  }
+
+  /* Plant cards */
   .plant-cards {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
-  .header-content {
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
+  .plant-card {
+    padding: 14px;
+  }
+
+  .plant-name {
+    font-size: 15px;
+  }
+
+  .plant-meta {
+    gap: 10px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+
+  .plant-observations,
+  .plant-concerns {
+    font-size: 12px;
+  }
+
+  .ai-summary {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .ai-date {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Bigger touch targets */
+  .btn {
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+
+  .btn-small {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .plant-expand {
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  /* No-data states */
+  .no-data {
+    padding: 40px 16px;
+  }
+
+  /* Fullscreen */
+  .fullscreen-overlay img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .sensor-card {
+    padding: 8px 4px;
+  }
+
+  .sensor-value {
+    font-size: 18px;
+  }
+
+  header h1 {
+    font-size: 14px;
+  }
+
+  .plant-meta {
+    gap: 6px;
+    font-size: 11px;
   }
 }
