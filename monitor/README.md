@@ -4,7 +4,7 @@ Raspberry Pi-based plant monitoring for the EcoGarden aquaponic system. Captures
 
 ## Hardware
 
-- Raspberry Pi 3 (192.168.1.127)
+- Raspberry Pi 3 (192.168.1.58)
 - Logitech HD USB camera (pointed at growing pod)
 - EcoGarden ESP8266 providing sensor data via MQTT
 
@@ -47,9 +47,9 @@ python app.py
 
 ## Access
 
-- **Dashboard:** http://192.168.1.127:8080
-- **Latest photo:** http://192.168.1.127:8080/api/photos/latest
-- **MJPEG stream (for HA):** http://192.168.1.127:8080/stream
+- **Dashboard:** http://192.168.1.58:8080
+- **Latest photo:** http://192.168.1.58:8080/api/photos/latest
+- **MJPEG stream (for HA):** http://192.168.1.58:8080/stream
 
 ## Configuration
 

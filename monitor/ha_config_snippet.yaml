@@ -9,8 +9,8 @@
 camera:
   - platform: generic
     name: EcoGarden Plants
-    still_image_url: http://192.168.1.127:8080/latest.jpg
-    stream_source: http://192.168.1.127:8080/stream
+    still_image_url: http://192.168.1.58:8080/latest.jpg
+    stream_source: http://192.168.1.58:8080/stream
     content_type: image/jpeg
 
 # MQTT sensors from the plant monitor

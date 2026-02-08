@@ -2,10 +2,10 @@
 
 ## Overview
 
-A plant monitoring system running on a Raspberry Pi 3 (192.168.1.127) with a Logitech HD USB camera, mounted at an angle above the EcoGarden growing pod. Provides growth tracking via timelapse photography, AI-powered health analysis via Claude API, herb care guides, and integration with the existing Home Assistant + Grafana stack.
+A plant monitoring system running on a Raspberry Pi 3 (192.168.1.58) with a Logitech HD USB camera, mounted at an angle above the EcoGarden growing pod. Provides growth tracking via timelapse photography, AI-powered health analysis via Claude API, herb care guides, and integration with the existing Home Assistant + Grafana stack.
 
 **Hardware:**
-- Raspberry Pi 3 (192.168.1.127)
+- Raspberry Pi 3 (192.168.1.58)
 - Logitech HD USB camera (angled from above, looking down at growing pod)
 - EcoGarden ESP8266 (192.168.1.196) providing light/temp sensor data via MQTT
 
@@ -14,7 +14,7 @@ A plant monitoring system running on a Raspberry Pi 3 (192.168.1.127) with a Log
 ## Architecture
 
 ```
-Logitech USB Cam → Raspberry Pi 3 (192.168.1.127)
+Logitech USB Cam → Raspberry Pi 3 (192.168.1.58)
                       ├── Photo capture service (cron, every 30 min during 06:00-22:00)
                       ├── Timelapse generator (ffmpeg, nightly at 22:30)
                       ├── AI health analyzer (Claude API, 1-2x daily)
@@ -167,7 +167,7 @@ If the AI flags something concerning (health score drops below 3, pest detected,
 
 ### Tech Stack
 
-Flask app running on the Pi at `http://192.168.1.127:8080`. Plain HTML/CSS/JS (no frontend framework). MQTT.js for live sensor updates via WebSocket. No database - reads directly from photo directories, JSON analysis files, and MQTT. No authentication (local network only).
+Flask app running on the Pi at `http://192.168.1.58:8080`. Plain HTML/CSS/JS (no frontend framework). MQTT.js for live sensor updates via WebSocket. No database - reads directly from photo directories, JSON analysis files, and MQTT. No authentication (local network only).
 
 ### Layout
 
@@ -193,7 +193,7 @@ Flask app running on the Pi at `http://192.168.1.127:8080`. Plain HTML/CSS/JS (n
 
 ### Camera Entity
 
-The Pi serves an MJPEG stream endpoint at `http://192.168.1.127:8080/stream` showing the latest captured photo (not continuous video). HA picks this up as a generic camera entity.
+The Pi serves an MJPEG stream endpoint at `http://192.168.1.58:8080/stream` showing the latest captured photo (not continuous video). HA picks this up as a generic camera entity.
 
 ### MQTT Sensors
 
