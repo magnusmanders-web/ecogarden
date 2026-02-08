@@ -24,10 +24,11 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 - Light sensor (TSL2561 on I2C 0x39) - real lux values
 - Home Assistant integration at ~/homeassistant
 - OTA firmware updates via /update endpoint
+- TuyaMCU UART communication (sends commands, no MCU response detected yet)
 
 **Not working / Unknown:**
 - Feeder servo - GPIO unknown, extensive testing failed (see investigation below)
-- Temperature sensor - not on I2C, likely 1-Wire DS18B20, returns placeholder 24.75°C
+- Temperature sensor - not on I2C, likely 1-Wire DS18B20, returns placeholder 24.75°C (1-Wire lib disabled to save memory for OTA)
 
 **Not needed:**
 - Pump - runs continuously when powered, no control required
@@ -36,16 +37,27 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 
 ```
 firmware/
-├── src/main.c       # C firmware: RPC handlers, MQTT pub/sub, GPIO control
-├── mos.yml          # Mongoose OS config: libs, config schema, WiFi/MQTT settings
-└── fs/index.html    # Web UI served by device
+├── src/main.c       # C firmware: RPC handlers, MQTT pub/sub, GPIO, TuyaMCU
+├── mos.yml          # Mongoose OS config (not in git - contains credentials)
+├── mos.yml.example  # Template config (in git)
+└── fs/index.html    # WiFi provisioning web UI served by device
+
+homeassistant/
+├── docker-compose.yml          # HA + InfluxDB 2.7 + Grafana stack
+├── config/configuration.yaml   # HA sensors, lights, REST commands for EcoGarden
+├── config/automations.yaml     # Light schedule, feeding, alerts
+└── grafana/provisioning/       # InfluxDB datasource + EcoGarden dashboard
 
 backup/              # Original device config/code for reference
-├── config.json      # Original device settings (includes I2C config, GCP settings)
+├── config.json      # Original device settings (I2C config, GCP settings)
 └── init.js          # Original mJS firmware (used GPIO 2 for LED)
+
+docs/FLASHING.md     # Serial and OTA flashing guide
 ```
 
-**Firmware pattern:** RPC handlers in `main.c` follow the pattern: parse JSON args → perform action → send JSON response. MQTT handler subscribes to `/devices/{id}/config` and `/devices/{id}/commands/#`.
+**Firmware pattern:** RPC handlers in `main.c` follow: parse JSON args → perform action → send JSON response. HTTP hooks at `/hooks/*` are routed through a single `http_handler()` dispatcher. MQTT handler subscribes to `/devices/{id}/config` and `/devices/{id}/commands/#`.
+
+**TuyaMCU pattern:** The firmware includes a TuyaMCU protocol implementation for communicating with a potential secondary MCU over UART1 (9600 baud, GPIO 13 RX / GPIO 15 TX). Used to attempt feeder control via datapoint commands. MCU detection checked via heartbeat response (header 0x55 0xAA).
 
 ## Commands
 
@@ -53,8 +65,11 @@ backup/              # Original device config/code for reference
 # Build firmware (requires mos tool)
 cd firmware && mos build --platform esp8266
 
-# OTA flash (direct upload to device - this works without license)
+# OTA flash (direct upload - works without Mongoose OS license)
 curl -F "file=@build/fw.zip" http://192.168.1.196/update
+
+# Serial flash (new device or bricked) - see docs/FLASHING.md
+mos flash --port /dev/ttyUSB0
 
 # Note: OTA.Update RPC requires Mongoose OS license, use /update endpoint instead
 ```
@@ -72,20 +87,27 @@ curl http://192.168.1.196/hooks/water_temperature   # {"value": 24.75}
 curl "http://192.168.1.196/hooks/set_led_brightness?value=0.8"
 curl "http://192.168.1.196/hooks/set_automatic_led_brightness?value=1"
 
-# Feeder (stub - GPIO not yet discovered)
+# Feeder (attempts TuyaMCU command)
 curl http://192.168.1.196/hooks/feed_now
 ```
 
 ## RPC API
 
 ```bash
-# LED control via HTTP RPC
+# LED control
 curl http://192.168.1.196/rpc/LED.Set -d '{"state":true}'
 curl http://192.168.1.196/rpc/LED.Toggle
 curl http://192.168.1.196/rpc/LED.Get
 
-# LED control via MQTT
-mosquitto_pub -h localhost -t '/devices/esp8266_5A604B/config' -m '{"led":1}'
+# TuyaMCU / secondary MCU (for feeder investigation)
+curl http://192.168.1.196/rpc/MCU.Heartbeat      # Detect MCU presence
+curl http://192.168.1.196/rpc/MCU.Query           # Query MCU state
+curl http://192.168.1.196/rpc/MCU.SendDP -d '{"dpid":1,"value":1}'  # Send datapoint
+curl http://192.168.1.196/rpc/MCU.Feed            # Trigger feeder (tries dpIds 1,3,101-104)
+
+# Temperature sensor (1-Wire disabled, returns placeholder)
+curl http://192.168.1.196/rpc/Temp.Scan
+curl http://192.168.1.196/rpc/Temp.Read
 
 # GPIO testing (for discovering unknown pins)
 curl "http://192.168.1.196/rpc/GPIO.Write?pin=4&value=1"
@@ -93,6 +115,9 @@ curl "http://192.168.1.196/rpc/GPIO.Read?pin=4"
 
 # I2C scan
 curl http://192.168.1.196/rpc/I2C.Scan
+
+# LED control via MQTT
+mosquitto_pub -h localhost -t '/devices/esp8266_5A604B/config' -m '{"led":1}'
 ```
 
 ## Hardware
@@ -103,10 +128,12 @@ curl http://192.168.1.196/rpc/I2C.Scan
 | Button | 0 | Confirmed |
 | I2C SDA | 12 | Confirmed |
 | I2C SCL | 14 | Confirmed |
+| UART1 RX (MCU) | 13 | TuyaMCU communication, 9600 baud |
+| UART1 TX (MCU) | 15 | TuyaMCU communication, 9600 baud |
 | Lux sensor | I2C 0x39 | TSL2561 - working via /hooks/light_sensor |
 | Pump | N/A | Runs continuously when powered, no control needed |
 | Feeder | Unknown | See investigation notes below |
-| Temp sensor | Unknown | Not on I2C, placeholder value used |
+| Temp sensor | 5 (configured, disabled) | 1-Wire DS18B20, lib disabled to save memory |
 
 ### Feeder Investigation (Feb 2026)
 
@@ -129,6 +156,7 @@ Firebase paths used:
 - **Original firmware** (`backup/init.js`, `backup/config.json`) only has LED control - no feeder code or GPIO
 - **I2C scan** found only TSL2561 (0x39) - no motor driver ICs at common addresses (0x0F, 0x20-0x27, 0x38-0x3F, 0x40, 0x60, 0x68)
 - **GPIO tested**: 1,2,3,5,9,10,13,15,16 with servo PWM, DC pulses, active-low - nothing moved
+- **TuyaMCU tested**: Heartbeat/datapoint commands sent over UART1 - no response detected
 - **OTA revert**: Slot 0 checked but original firmware not recoverable
 - **Ecobloom contact** (hello@ecobloom.se) - unresponsive
 
@@ -136,32 +164,36 @@ Firebase paths used:
 
 **Next step:** Photograph internals during tank maintenance to trace feeder wiring
 
-Device IP: 192.168.1.196 | MQTT broker: 192.168.1.5:1883
-
 ## Config Schema
 
 Custom settings in `mos.yml` under `ecogarden.*`:
-- `ecogarden.led_pin` (int, default 4)
-- `ecogarden.sensor_interval_ms` (int, default 5000)
+- `ecogarden.led_pin` (int, default 4) - LED/growlight GPIO
+- `ecogarden.sensor_interval_ms` (int, default 5000) - MQTT sensor publish interval
+- `ecogarden.mcu_uart` (int, default 1) - UART number for TuyaMCU communication
+- `ecogarden.onewire_pin` (int, default 5) - 1-Wire GPIO for DS18B20 (currently disabled in code)
 
 ## Home Assistant Setup
 
 ```bash
 cd homeassistant
 docker compose up -d
-# Access at http://localhost:8123
+# HA: http://localhost:8123 | Grafana: http://localhost:3000 | InfluxDB: http://localhost:8086
 ```
 
+Main HA setup (with all your devices): `~/homeassistant`
+Example HA config for EcoGarden: `./homeassistant/` (in this repo)
+
 The config provides:
-- Light sensor (0-100%)
-- Water temperature sensor
-- Growlight on/off control
-- Feed fish button (stub until GPIO found)
-- Auto brightness toggle
+- Light sensor (0-100%) and water temperature sensor
+- Growlight on/off control and auto brightness toggle
+- Feed fish button (sends TuyaMCU command)
+- InfluxDB time-series storage for sensor data
+- Grafana dashboard for EcoGarden monitoring
+- Automations: light schedule (06:00-22:00), feeding (08:00 + 18:00), temp/light alerts
 
 ## WiFi Provisioning
 
-The firmware now supports WiFi configuration via a captive portal - no hardcoded credentials needed.
+The firmware supports WiFi configuration via a captive portal - no hardcoded credentials needed.
 
 **First-time setup:**
 1. Device creates WiFi hotspot: `EcoGarden-Setup` (password: `ecogarden`)
@@ -175,15 +207,10 @@ The firmware now supports WiFi configuration via a captive portal - no hardcoded
 - If device can't connect (e.g., wrong password, network changed), it falls back to AP mode after 15 seconds
 - Or factory reset: Connect via serial and run `mos config-set wifi.sta.ssid="" wifi.sta.pass=""`
 
-**AP Mode settings (mos.yml):**
-- SSID: `EcoGarden-Setup`
-- Password: `ecogarden`
-- IP: `192.168.4.1`
-
 ## TODO
 
 1. **Feeder:** Photograph internals during maintenance, trace feeder wiring to identify control method
-2. **Temp sensor:** May be 1-Wire DS18B20, not visible in tank
+2. **Temp sensor:** May be 1-Wire DS18B20, not visible in tank. Re-enable 1-Wire lib once confirmed (disabled to save memory for OTA)
 
 ## When Photos Are Available
 
@@ -197,14 +224,6 @@ When you have photos of the internals, look for and document:
 6. **Temp sensor** - Look for small probe with 3 wires (DS18B20) or 2 wires (thermistor)
 
 **To add feeder support once GPIO is found:**
-1. Edit `firmware/src/main.c` - add GPIO control in `hook_feed_now()` function (line ~209)
+1. Edit `firmware/src/main.c` - add GPIO control in `hook_feed_now()` function (line ~402)
 2. Add to `mos.yml` config schema: `ecogarden.feeder_pin`
 3. Build and OTA flash: `cd firmware && mos build --platform esp8266 && curl -F "file=@build/fw.zip" http://192.168.1.196/update`
-
-## Home Assistant Location
-
-Main HA setup (with all your devices): `~/homeassistant`
-Example HA config for EcoGarden: `./homeassistant/` (in this repo)
-
-Start HA: `cd ~/homeassistant && docker compose up -d`
-Access: http://localhost:8123
