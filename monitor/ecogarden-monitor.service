@@ -1,0 +1,16 @@
+[Unit]
+Description=EcoGarden Plant Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ecogarden/monitor
+EnvironmentFile=/etc/ecogarden-monitor.env
+ExecStart=/home/pi/ecogarden/monitor/venv/bin/python app.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

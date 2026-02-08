@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoGarden Plant Monitor</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>EcoGarden Plant Monitor</h1>
+      <div class="header-status">
+        <span id="mqtt-status" class="status-badge disconnected">MQTT</span>
+        <span id="last-update" class="last-update"></span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Sensor Sidebar -->
+    <aside class="sensor-sidebar">
+      <div class="sensor-card">
+        <div class="sensor-label">Light Level</div>
+        <div class="sensor-value" id="sensor-lux">--</div>
+        <div class="sensor-unit">lux</div>
+      </div>
+      <div class="sensor-card">
+        <div class="sensor-label">Water Temp</div>
+        <div class="sensor-value" id="sensor-temp">--</div>
+        <div class="sensor-unit">&deg;C</div>
+      </div>
+      <div class="sensor-card">
+        <div class="sensor-label">Overall Health</div>
+        <div class="sensor-value health-score" id="overall-health">--</div>
+        <div class="sensor-unit">/ 5</div>
+      </div>
+      <div id="alerts-container" class="alerts-container" style="display:none;">
+        <div class="sensor-label">Alerts</div>
+        <div id="alerts-list"></div>
+      </div>
+    </aside>
+
+    <div class="content">
+      <!-- Latest Photo -->
+      <section class="photo-section">
+        <div class="section-header">
+          <h2>Latest Capture</h2>
+          <button id="capture-btn" class="btn btn-small" onclick="manualCapture()">Capture Now</button>
+        </div>
+        <div class="photo-main">
+          <img id="latest-photo" src="" alt="Latest plant photo" onclick="openFullscreen(this)">
+          <div id="photo-no-data" class="no-data">No photos captured yet</div>
+        </div>
+        <div class="thumbnail-strip" id="thumbnail-strip"></div>
+      </section>
+
+      <!-- Timelapse -->
+      <section class="timelapse-section">
+        <div class="section-header">
+          <h2>Timelapse</h2>
+          <div class="timelapse-controls">
+            <select id="timelapse-type" onchange="loadTimelapses()">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+            <select id="timelapse-select" onchange="playTimelapse()"></select>
+          </div>
+        </div>
+        <div class="timelapse-player">
+          <video id="timelapse-video" controls>
+            <source src="" type="video/mp4">
+          </video>
+          <div id="timelapse-no-data" class="no-data">No timelapses available yet</div>
+        </div>
+      </section>
+
+      <!-- Plant Cards -->
+      <section class="plants-section">
+        <h2>Plants</h2>
+        <div id="ai-summary" class="ai-summary" style="display:none;">
+          <span class="ai-badge">AI Analysis</span>
+          <span id="ai-summary-text"></span>
+          <span id="ai-summary-date" class="ai-date"></span>
+        </div>
+        <div class="plant-cards" id="plant-cards"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Fullscreen overlay -->
+  <div id="fullscreen-overlay" class="fullscreen-overlay" onclick="closeFullscreen()">
+    <img id="fullscreen-img" src="" alt="Full size photo">
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

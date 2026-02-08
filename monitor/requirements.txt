@@ -1,0 +1,8 @@
+pyyaml>=6.0
+flask>=3.0
+paho-mqtt>=2.0
+anthropic>=0.40
+influxdb-client>=1.40
+opencv-python-headless>=4.9
+Pillow>=10.0
+schedule>=1.2

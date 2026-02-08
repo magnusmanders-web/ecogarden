@@ -1,0 +1,74 @@
+# EcoGarden Plant Monitor - Home Assistant Configuration Snippet
+#
+# Add these entries to your Home Assistant configuration.yaml
+# to integrate the plant monitoring dashboard.
+#
+# Restart Home Assistant after adding.
+
+# Camera entity showing latest plant photo
+camera:
+  - platform: generic
+    name: EcoGarden Plants
+    still_image_url: http://192.168.1.127:8080/latest.jpg
+    stream_source: http://192.168.1.127:8080/stream
+    content_type: image/jpeg
+
+# MQTT sensors from the plant monitor
+mqtt:
+  sensor:
+    - name: "EcoGarden Plant Health"
+      state_topic: "/devices/ecogarden-monitor/events"
+      value_template: "{{ value_json.overall_health }}"
+      unit_of_measurement: "/5"
+      icon: mdi:flower
+
+    - name: "EcoGarden Next Harvest"
+      state_topic: "/devices/ecogarden-monitor/events"
+      value_template: "{{ value_json.next_harvest }}"
+      icon: mdi:fruit-cherries
+
+    - name: "EcoGarden Plant Count"
+      state_topic: "/devices/ecogarden-monitor/events"
+      value_template: "{{ value_json.plant_count }}"
+      icon: mdi:sprout
+
+    - name: "EcoGarden Days Since Planted"
+      state_topic: "/devices/ecogarden-monitor/events"
+      value_template: "{{ value_json.days_since_planted }}"
+      unit_of_measurement: "days"
+      icon: mdi:calendar-clock
+
+  binary_sensor:
+    - name: "EcoGarden Plant Alert"
+      state_topic: "/devices/ecogarden-monitor/events"
+      value_template: "{{ value_json.alerts | length > 0 }}"
+      payload_on: "True"
+      payload_off: "False"
+      device_class: problem
+      icon: mdi:alert-circle
+
+# Example automations (add to automations.yaml):
+#
+# - alias: "Plant Health Alert"
+#   trigger:
+#     - platform: numeric_state
+#       entity_id: sensor.ecogarden_plant_health
+#       below: 3
+#   action:
+#     - service: notify.mobile_app
+#       data:
+#         title: "EcoGarden Alert"
+#         message: "Plant health dropped to {{ states('sensor.ecogarden_plant_health') }}/5"
+#
+# - alias: "Harvest Ready Notification"
+#   trigger:
+#     - platform: state
+#       entity_id: sensor.ecogarden_next_harvest
+#   condition:
+#     - condition: template
+#       value_template: "{{ 'ready now' in states('sensor.ecogarden_next_harvest') | lower }}"
+#   action:
+#     - service: notify.mobile_app
+#       data:
+#         title: "EcoGarden Harvest"
+#         message: "{{ states('sensor.ecogarden_next_harvest') }}"
