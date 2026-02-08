@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from datetime import datetime
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ def capture_photo(config):
                 check=True,
                 timeout=30,
             )
+            _rotate_if_needed(filepath, config)
             _add_timestamp(filepath)
             log.info("Captured photo: %s", filepath)
             return filepath
@@ -71,6 +72,7 @@ def capture_photo(config):
 
         params = [cv2.IMWRITE_JPEG_QUALITY, quality]
         cv2.imwrite(filepath, frame, params)
+        _rotate_if_needed(filepath, config)
         _add_timestamp(filepath)
         log.info("Captured photo (OpenCV): %s", filepath)
         return filepath
@@ -78,6 +80,19 @@ def capture_photo(config):
     except ImportError:
         log.error("No camera backend available (fswebcam or OpenCV)")
         return None
+
+
+def _rotate_if_needed(filepath, config):
+    """Rotate photo if rotation is configured."""
+    rotation = config["capture"].get("rotation", 0)
+    if rotation == 0:
+        return
+    try:
+        img = Image.open(filepath)
+        img = img.rotate(rotation, expand=True)
+        img.save(filepath, quality=85)
+    except Exception as e:
+        log.warning("Failed to rotate photo: %s", e)
 
 
 def _add_timestamp(filepath):
