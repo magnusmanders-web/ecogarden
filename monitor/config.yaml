@@ -1,0 +1,53 @@
+plants:
+  - name: "Greek Oregano"
+    species: "oregano"
+    planted_date: "2026-02-08"
+    position: "left"
+    notes: "Perennial, slow starter"
+  - name: "Fine-leaf Basil"
+    species: "basil"
+    planted_date: "2026-02-08"
+    position: "center"
+  - name: "Lettuce"
+    species: "lettuce"
+    planted_date: "2026-02-08"
+    position: "right"
+
+capture:
+  interval_minutes: 30
+  start_hour: 6
+  end_hour: 22
+  resolution: "1920x1080"
+  quality: 85
+
+timelapse:
+  daily_time: "22:30"
+  weekly_day: "sunday"
+  weekly_time: "23:00"
+  fps: 3
+  min_photos: 5
+
+analysis:
+  times: ["10:00", "18:00"]
+
+mqtt:
+  broker: "192.168.1.5"
+  port: 1883
+  ecogarden_topic: "/devices/esp8266_5A604B/events"
+  publish_topic: "/devices/ecogarden-monitor/events"
+
+influxdb:
+  url: "http://192.168.1.5:8086"
+  # Token loaded from INFLUXDB_TOKEN env var (do not hardcode here)
+  org: "homeassistant"
+  bucket: "homeassistant"
+
+web:
+  host: "0.0.0.0"
+  port: 8080
+
+storage:
+  photo_dir: "photos"
+  timelapse_dir: "timelapse"
+  analysis_dir: "analysis"
+  retention_days: 30

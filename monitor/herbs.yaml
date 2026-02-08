@@ -1,0 +1,245 @@
+oregano:
+  display_name: "Oregano"
+  scientific_name: "Origanum vulgare"
+  temp_min_c: 15
+  temp_max_c: 29
+  temp_ideal_c: 21
+  light_needs: "full sun"
+  light_min_lux: 3000
+  germination_days: [7, 14]
+  growth_stages:
+    sprout: [0, 14]
+    seedling: [14, 35]
+    vegetative: [35, 70]
+    mature: [70, null]
+  days_to_harvest: [60, 90]
+  harvest_tips: "Harvest when stems are 4+ inches. Cut above a leaf node to encourage branching. Best flavor just before flowering."
+  common_problems:
+    - "Slow germination - be patient, can take 7-14 days"
+    - "Root rot if water too stagnant"
+    - "Leggy growth if insufficient light"
+    - "Aphids on new growth"
+  aquaponic_notes: "Thrives in aquaponic systems. Prefers slightly drier roots - ensure good aeration."
+
+basil:
+  display_name: "Basil"
+  scientific_name: "Ocimum basilicum"
+  temp_min_c: 18
+  temp_max_c: 30
+  temp_ideal_c: 24
+  light_needs: "full sun"
+  light_min_lux: 4000
+  germination_days: [5, 10]
+  growth_stages:
+    sprout: [0, 10]
+    seedling: [10, 25]
+    vegetative: [25, 50]
+    mature: [50, null]
+  days_to_harvest: [40, 60]
+  harvest_tips: "Pinch off top leaves to encourage bushy growth. Never remove more than 1/3 of the plant. Harvest before flowering for best flavor."
+  common_problems:
+    - "Damping off in seedlings if too wet"
+    - "Yellowing leaves = nutrient deficiency or cold stress"
+    - "Bolting (flowering early) from heat or light stress"
+    - "Fusarium wilt - brown streaks on stems"
+    - "Very sensitive to cold - below 10C is fatal"
+  aquaponic_notes: "Excellent in aquaponics. Heavy feeder, benefits from fish waste nutrients. Warm water preferred."
+
+lettuce:
+  display_name: "Lettuce"
+  scientific_name: "Lactuca sativa"
+  temp_min_c: 10
+  temp_max_c: 24
+  temp_ideal_c: 18
+  light_needs: "partial to full sun"
+  light_min_lux: 2000
+  germination_days: [3, 7]
+  growth_stages:
+    sprout: [0, 7]
+    seedling: [7, 21]
+    vegetative: [21, 45]
+    mature: [45, null]
+  days_to_harvest: [30, 60]
+  harvest_tips: "Cut outer leaves first for continuous harvest. Or harvest whole head when firm. Morning harvest for crispest leaves."
+  common_problems:
+    - "Bolting in warm water (above 24C) - becomes bitter"
+    - "Tip burn from calcium deficiency or pH imbalance"
+    - "Aphids on underside of leaves"
+    - "Slimy roots if water not aerated"
+  aquaponic_notes: "One of the best aquaponic crops. Fast growing, tolerates variable conditions. Watch water temp - prefers cool."
+
+mint:
+  display_name: "Mint"
+  scientific_name: "Mentha"
+  temp_min_c: 13
+  temp_max_c: 24
+  temp_ideal_c: 18
+  light_needs: "partial to full sun"
+  light_min_lux: 2500
+  germination_days: [10, 15]
+  growth_stages:
+    sprout: [0, 15]
+    seedling: [15, 30]
+    vegetative: [30, 60]
+    mature: [60, null]
+  days_to_harvest: [60, 90]
+  harvest_tips: "Cut stems just above a leaf pair. Regular harvesting promotes bushier growth. Best flavor before flowering."
+  common_problems:
+    - "Very aggressive grower - can crowd out neighbors"
+    - "Rust (orange spots on leaves)"
+    - "Spider mites in dry conditions"
+  aquaponic_notes: "Grows vigorously in aquaponics. May need separate container to prevent taking over."
+
+cilantro:
+  display_name: "Cilantro"
+  scientific_name: "Coriandrum sativum"
+  temp_min_c: 10
+  temp_max_c: 24
+  temp_ideal_c: 18
+  light_needs: "partial to full sun"
+  light_min_lux: 2500
+  germination_days: [7, 14]
+  growth_stages:
+    sprout: [0, 14]
+    seedling: [14, 28]
+    vegetative: [28, 50]
+    mature: [50, null]
+  days_to_harvest: [40, 60]
+  harvest_tips: "Cut outer stems at the base. Bolts quickly in heat - succession plant for continuous supply."
+  common_problems:
+    - "Bolts very quickly in warm temps above 24C"
+    - "Short harvest window"
+    - "Leaf yellowing from poor drainage"
+  aquaponic_notes: "Challenging in warm aquaponic systems. Best in cooler water. Quick bolt-to-seed cycle."
+
+chives:
+  display_name: "Chives"
+  scientific_name: "Allium schoenoprasum"
+  temp_min_c: 10
+  temp_max_c: 26
+  temp_ideal_c: 18
+  light_needs: "full sun"
+  light_min_lux: 3000
+  germination_days: [14, 21]
+  growth_stages:
+    sprout: [0, 21]
+    seedling: [21, 45]
+    vegetative: [45, 75]
+    mature: [75, null]
+  days_to_harvest: [60, 90]
+  harvest_tips: "Cut leaves to 2 inches above the base. Regular cutting keeps growth tender. Flowers are edible."
+  common_problems:
+    - "Slow to germinate"
+    - "Onion fly maggots (rare indoors)"
+    - "Rust in humid conditions"
+  aquaponic_notes: "Perennial, reliable in aquaponics. Slow starter but long-lived once established."
+
+parsley:
+  display_name: "Parsley"
+  scientific_name: "Petroselinum crispum"
+  temp_min_c: 10
+  temp_max_c: 25
+  temp_ideal_c: 18
+  light_needs: "partial to full sun"
+  light_min_lux: 2500
+  germination_days: [14, 28]
+  growth_stages:
+    sprout: [0, 28]
+    seedling: [28, 50]
+    vegetative: [50, 80]
+    mature: [80, null]
+  days_to_harvest: [70, 90]
+  harvest_tips: "Pick outer stems first at the base. Leave inner stems to keep growing. Biennial - bolts in second year."
+  common_problems:
+    - "Very slow germination (2-4 weeks)"
+    - "Carrot fly"
+    - "Crown rot if too wet at base"
+  aquaponic_notes: "Good aquaponic herb but slow to establish. Patience required."
+
+dill:
+  display_name: "Dill"
+  scientific_name: "Anethum graveolens"
+  temp_min_c: 15
+  temp_max_c: 25
+  temp_ideal_c: 20
+  light_needs: "full sun"
+  light_min_lux: 3500
+  germination_days: [7, 14]
+  growth_stages:
+    sprout: [0, 14]
+    seedling: [14, 30]
+    vegetative: [30, 55]
+    mature: [55, null]
+  days_to_harvest: [40, 65]
+  harvest_tips: "Snip fronds as needed. Harvest seeds when flower heads turn brown. Self-seeds readily."
+  common_problems:
+    - "Bolts quickly in warm conditions"
+    - "Tall and floppy without support"
+    - "Aphids on flower heads"
+  aquaponic_notes: "Grows tall - needs vertical space. Bolts fast in warm water."
+
+thyme:
+  display_name: "Thyme"
+  scientific_name: "Thymus vulgaris"
+  temp_min_c: 10
+  temp_max_c: 28
+  temp_ideal_c: 20
+  light_needs: "full sun"
+  light_min_lux: 4000
+  germination_days: [14, 21]
+  growth_stages:
+    sprout: [0, 21]
+    seedling: [21, 45]
+    vegetative: [45, 90]
+    mature: [90, null]
+  days_to_harvest: [80, 120]
+  harvest_tips: "Snip sprigs as needed. Cut no more than 1/3 of growth. Best flavor just before flowering."
+  common_problems:
+    - "Very slow grower initially"
+    - "Root rot if water-logged - needs excellent drainage"
+    - "Gray mold in humid conditions"
+  aquaponic_notes: "Challenging in aquaponics - prefers drier conditions. Needs good aeration around roots."
+
+rosemary:
+  display_name: "Rosemary"
+  scientific_name: "Salvia rosmarinus"
+  temp_min_c: 10
+  temp_max_c: 30
+  temp_ideal_c: 20
+  light_needs: "full sun"
+  light_min_lux: 5000
+  germination_days: [14, 28]
+  growth_stages:
+    sprout: [0, 28]
+    seedling: [28, 60]
+    vegetative: [60, 120]
+    mature: [120, null]
+  days_to_harvest: [90, 150]
+  harvest_tips: "Snip sprigs from the top. Woody stems are not as flavorful. Don't cut into old wood."
+  common_problems:
+    - "Extremely slow germination - best started from cuttings"
+    - "Powdery mildew in humid conditions"
+    - "Root rot in waterlogged conditions"
+  aquaponic_notes: "Difficult in aquaponics due to water sensitivity. Better from cuttings than seed."
+
+arugula:
+  display_name: "Arugula"
+  scientific_name: "Eruca vesicaria"
+  temp_min_c: 10
+  temp_max_c: 22
+  temp_ideal_c: 16
+  light_needs: "partial to full sun"
+  light_min_lux: 2000
+  germination_days: [3, 7]
+  growth_stages:
+    sprout: [0, 7]
+    seedling: [7, 14]
+    vegetative: [14, 30]
+    mature: [30, null]
+  days_to_harvest: [21, 40]
+  harvest_tips: "Baby leaves at 21 days, full size at 40 days. Pick outer leaves for continuous harvest. Gets spicier with age."
+  common_problems:
+    - "Bolts quickly above 22C"
+    - "Flea beetles make small holes in leaves"
+    - "Bitter flavor in warm conditions"
+  aquaponic_notes: "Excellent fast-growing aquaponic crop. Keep water cool for best results."

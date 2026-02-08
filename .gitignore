@@ -24,3 +24,14 @@ Thumbs.db
 # Temp
 *.tmp
 *.log
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Monitor runtime data
+monitor/venv/
+monitor/photos/
+monitor/timelapse/
+monitor/analysis/
