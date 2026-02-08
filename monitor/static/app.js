@@ -117,8 +117,6 @@ function playTimelapse() {
 // --- UI Updates ---
 
 function updateSensors(sensors) {
-  document.getElementById("sensor-lux").textContent =
-    sensors.lux != null ? Math.round(sensors.lux) : "--";
   document.getElementById("sensor-temp").textContent =
     sensors.temp_c != null ? sensors.temp_c.toFixed(1) : "--";
 }

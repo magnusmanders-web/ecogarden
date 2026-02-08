@@ -59,7 +59,7 @@ def get_growth_stage(species, days):
     return current_stage, progress
 
 
-def get_care_advice(species, days, lux=None, temp_c=None):
+def get_care_advice(species, days, temp_c=None):
     """Get context-specific care advice for a plant.
 
     Returns:
@@ -98,11 +98,6 @@ def get_care_advice(species, days, lux=None, temp_c=None):
         elif temp_c > herb.get("temp_max_c", 30):
             advice.append(f"WARNING: Water temp {temp_c}C exceeds maximum {herb['temp_max_c']}C for {herb['display_name']}.")
 
-    if lux is not None:
-        min_lux = herb.get("light_min_lux", 2000)
-        if lux < min_lux:
-            advice.append(f"Light level ({lux} lux) is below recommended minimum ({min_lux} lux) for {herb['display_name']}.")
-
     return advice
 
 
@@ -121,7 +116,6 @@ def check_conditions(plants, sensors, herbs=None):
         herbs = load_herbs()
 
     warnings = []
-    lux = sensors.get("lux")
     temp_c = sensors.get("temp_c")
 
     for plant in plants:
@@ -144,15 +138,6 @@ def check_conditions(plants, sensors, herbs=None):
                     "plant": name,
                     "type": "temp",
                     "message": f"Water temperature ({temp_c}C) too warm for {name} (max {herb['temp_max_c']}C)",
-                })
-
-        if lux is not None:
-            min_lux = herb.get("light_min_lux", 2000)
-            if lux < min_lux:
-                warnings.append({
-                    "plant": name,
-                    "type": "light",
-                    "message": f"Light level ({lux} lux) below minimum for {name} ({min_lux} lux)",
                 })
 
     return warnings
