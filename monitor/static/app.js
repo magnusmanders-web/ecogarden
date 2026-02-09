@@ -992,8 +992,8 @@ function buddyClick() {
   }, 700);
 }
 
-// Spawn buddy after a delay
-setTimeout(initBuddy, 50000 + Math.random() * 20000);
+// Spawn buddy after 15-25 seconds
+setTimeout(initBuddy, 15000 + Math.random() * 10000);
 
 // --- Sea Turtle ---
 
@@ -1012,7 +1012,7 @@ const turtleQuotes = [
 let turtleTimer = null;
 
 function scheduleTurtle() {
-  turtleTimer = setTimeout(spawnTurtle, 90000 + Math.random() * 90000);
+  turtleTimer = setTimeout(spawnTurtle, 60000 + Math.random() * 60000);
 }
 
 function spawnTurtle() {
@@ -1065,8 +1065,8 @@ function spawnTurtle() {
   requestAnimationFrame(turtleMove);
 }
 
-// First turtle after 60-120 seconds
-setTimeout(scheduleTurtle, 60000 + Math.random() * 60000);
+// First turtle after 40-70 seconds
+setTimeout(spawnTurtle, 40000 + Math.random() * 30000);
 
 // --- Shark Attack! ---
 
@@ -1077,7 +1077,7 @@ let sharkTimer = null;
 let sharkKills = 0;
 
 function scheduleShark() {
-  sharkTimer = setTimeout(spawnShark, 120000 + Math.random() * 120000);
+  sharkTimer = setTimeout(spawnShark, 80000 + Math.random() * 60000);
 }
 
 function spawnShark() {
@@ -1267,8 +1267,8 @@ function endSharkPanic() {
   }
 }
 
-// First shark after 2-4 minutes
-setTimeout(scheduleShark, 120000 + Math.random() * 120000);
+// First shark after 70-110 seconds
+setTimeout(spawnShark, 70000 + Math.random() * 40000);
 
 // --- Helpers ---
 
