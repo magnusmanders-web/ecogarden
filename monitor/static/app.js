@@ -814,16 +814,10 @@ function showFishTip() {
     setTimeout(() => fish.el.classList.remove("trick-bounce"), 600);
   }
 
-  // Fix bubble orientation when fish faces right (SVG flipped)
-  if (!fish.facingLeft) {
-    speechEl.style.transform = "translateX(-50%) translateY(0) scale(1) scaleX(-1)";
-    textEl.style.transform = "scaleX(-1)";
-    headerEl.style.transform = "scaleX(-1)";
-  } else {
-    speechEl.style.transform = "";
-    textEl.style.transform = "";
-    headerEl.style.transform = "";
-  }
+  // The fish parent has scaleX(1) or scaleX(-1). The speech bubble inherits
+  // that, so always counter-flip it to keep text readable.
+  const scaleX = fish.facingLeft ? 1 : -1;
+  speechEl.style.transform = "translateX(-50%) translateY(0) scale(1) scaleX(" + scaleX + ")";
 
   // Hide after 7 seconds
   setTimeout(() => {
