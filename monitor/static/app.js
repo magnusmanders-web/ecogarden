@@ -854,12 +854,421 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     cancelAnimationFrame(fishFrame);
     clearTimeout(fishTipTimer);
+    cancelAnimationFrame(buddy.frame);
+    clearTimeout(buddy.quoteTimer);
   } else if (fish.el) {
     fishFrame = requestAnimationFrame(fishLoop);
     if (!fish.moving) fishPickTarget();
     scheduleTip();
+    if (buddy.el) buddy.frame = requestAnimationFrame(buddyLoop);
   }
 });
+
+// --- Buddy Fish: "Gill" ---
+
+const buddySvg = '<svg viewBox="0 0 60 38" fill="none"><defs><radialGradient id="bBody" cx="38%" cy="40%" r="55%"><stop offset="0%" stop-color="#88ddff"/><stop offset="45%" stop-color="#44aadd"/><stop offset="100%" stop-color="#2277aa"/></radialGradient><linearGradient id="bFin" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#66ccee" stop-opacity="0.8"/><stop offset="100%" stop-color="#2288bb" stop-opacity="0.4"/></linearGradient></defs><g class="fish-tail-g"><path d="M44 19 Q49 8 56 4 Q52 14 50 19 Q52 24 56 34 Q49 30 44 19Z" fill="#3399cc" opacity="0.8"/></g><path d="M22 8 Q25 1 32 5 Q30 8 26 9Z" fill="#55bbdd" opacity="0.7"/><ellipse cx="28" cy="19" rx="19" ry="13" fill="url(#bBody)"/><ellipse cx="26" cy="23" rx="12" ry="6" fill="white" opacity="0.07"/><path d="M24 10 Q28 19 24 28" fill="none" stroke="#66ccee" stroke-width="1.5" opacity="0.2"/><path d="M30 11 Q34 19 30 27" fill="none" stroke="#66ccee" stroke-width="1.5" opacity="0.15"/><g class="fish-pec-g"><path d="M25 28 Q20 35 27 37 Q28 32 26 28Z" fill="url(#bFin)"/></g><ellipse cx="17" cy="16" rx="4.5" ry="5" fill="white"/><ellipse cx="16" cy="15.5" rx="3" ry="3.5" fill="#1a1a2e"/><circle cx="14.5" cy="14" r="1.3" fill="white" opacity="0.9"/><path d="M10 22 Q13 25 16 23" fill="none" stroke="#1a6688" stroke-width="1" stroke-linecap="round"/><ellipse cx="19" cy="22" rx="3" ry="2" fill="#66aaff" opacity="0.12"/></svg>';
+
+const buddyQuotes = [
+  "Is that basil? I can smell it from here!",
+  "I tried cooking once. Nearly burned the ocean down.",
+  "My dating profile says \u2018great swimmer\u2019. Technically true.",
+  "Do these scales make me look fat?",
+  "My therapist says I need to stop going with the flow.",
+  "I told a shrimp joke. It was a little shellfish.",
+  "The rent here is free. Landlord\u2019s a bit wet though.",
+  "I\u2019m not lost. I\u2019m on an adventure. Big difference.",
+  "Water you looking at?",
+  "That lettuce gives me weird looks. I think it knows things.",
+  "Plot twist: I\u2019m a vegetarian fish. \u2026 Kidding. Or am I?",
+  "Fun fact: my memory is exactly 3 sec\u2014 what were we saying?",
+  "If I had legs I\u2019d be unstoppable. Terrifying, even.",
+  "I\u2019ve been thinking about getting into crypto. AquaCoin.",
+  "Bubbles thinks he\u2019s the star. I\u2019m clearly the funny one.",
+  "Is it just me or is it wet everywhere?",
+  "I just want you to know\u2026 I believe in you. And your herbs.",
+  "I\u2019m not saying I\u2019m fast, but I once outran a current.",
+];
+
+let buddy = {
+  el: null, x: 0, y: 0, tx: 0, ty: 0, facingLeft: true,
+  moving: false, speed: 1, frame: null, quoteTimer: null, quoteIdx: 0,
+};
+
+function initBuddy() {
+  if (window.innerWidth < 768 || buddy.el) return;
+
+  const el = document.createElement("div");
+  el.className = "buddy";
+  el.innerHTML = '<div class="buddy-body">' + buddySvg + '</div><div class="buddy-speech"></div>';
+  el.onclick = buddyClick;
+  document.body.appendChild(el);
+  buddy.el = el;
+
+  // Enter from the left
+  buddy.x = -60;
+  buddy.y = window.innerHeight * 0.6;
+  buddy.el.style.transform = "translate(" + buddy.x + "px," + buddy.y + "px)";
+
+  buddy.tx = window.innerWidth * 0.3;
+  buddy.ty = window.innerHeight * 0.5;
+  buddy.facingLeft = false;
+  buddy.moving = true;
+
+  buddy.frame = requestAnimationFrame(buddyLoop);
+  scheduleBuddyQuote();
+}
+
+function buddyPickTarget() {
+  // Follow Bubbles loosely — stay 80-200px away
+  const offsetX = (Math.random() - 0.5) * 200;
+  const offsetY = (Math.random() - 0.5) * 150;
+  buddy.tx = Math.max(50, Math.min(window.innerWidth - 80, fish.x + offsetX));
+  buddy.ty = Math.max(60, Math.min(window.innerHeight - 80, fish.y + offsetY));
+  buddy.facingLeft = buddy.tx < buddy.x;
+  buddy.moving = true;
+  buddy.speed = 0.6 + Math.random() * 0.8;
+  buddy.el.classList.remove("paused");
+}
+
+function buddyLoop(time) {
+  if (!buddy.el) return;
+  buddy.frame = requestAnimationFrame(buddyLoop);
+  if (!buddy.moving) return;
+
+  const dx = buddy.tx - buddy.x;
+  const dy = buddy.ty - buddy.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (dist < 4) {
+    buddy.moving = false;
+    buddy.x = buddy.tx;
+    buddy.y = buddy.ty;
+    buddy.el.classList.add("paused");
+    setTimeout(buddyPickTarget, 2000 + Math.random() * 3000);
+    return;
+  }
+
+  const ease = Math.min(buddy.speed, dist * 0.02);
+  buddy.x += (dx / dist) * ease;
+  buddy.y += (dy / dist) * ease;
+
+  const wave = Math.sin(time * 0.0045) * 2.5;
+  const scaleX = buddy.facingLeft ? 1 : -1;
+  buddy.el.style.transform =
+    "translate(" + buddy.x.toFixed(1) + "px," + (buddy.y + wave).toFixed(1) + "px) scaleX(" + scaleX + ")";
+}
+
+function scheduleBuddyQuote() {
+  buddy.quoteTimer = setTimeout(showBuddyQuote, 30000 + Math.random() * 20000);
+}
+
+function showBuddyQuote() {
+  if (!buddy.el) return;
+  const speech = buddy.el.querySelector(".buddy-speech");
+  if (!speech) return;
+
+  const quote = buddyQuotes[buddy.quoteIdx % buddyQuotes.length];
+  buddy.quoteIdx++;
+
+  const scaleX = buddy.facingLeft ? 1 : -1;
+  speech.textContent = quote;
+  speech.style.transform = "translateX(-50%) translateY(0) scale(1) scaleX(" + scaleX + ")";
+
+  buddy.moving = false;
+  buddy.el.classList.add("paused", "talking");
+
+  setTimeout(() => {
+    buddy.el.classList.remove("talking");
+    setTimeout(buddyPickTarget, 500);
+    scheduleBuddyQuote();
+  }, 5000);
+}
+
+function buddyClick() {
+  if (!buddy.el) return;
+  buddy.el.querySelector(".buddy-body").style.animation = "trickSpin 0.6s cubic-bezier(0.25,1,0.5,1)";
+  setTimeout(() => {
+    buddy.el.querySelector(".buddy-body").style.animation = "";
+  }, 700);
+}
+
+// Spawn buddy after a delay
+setTimeout(initBuddy, 50000 + Math.random() * 20000);
+
+// --- Sea Turtle ---
+
+const turtleSvg = '<svg viewBox="0 0 70 50" fill="none"><defs><radialGradient id="tShell" cx="45%" cy="45%" r="50%"><stop offset="0%" stop-color="#7ab856"/><stop offset="100%" stop-color="#4a7a32"/></radialGradient></defs><ellipse class="turtle-flipper-fl" cx="18" cy="14" rx="9" ry="3.5" fill="#6aa846" transform="rotate(-15 18 14)"/><ellipse class="turtle-flipper-bl" cx="20" cy="40" rx="9" ry="3.5" fill="#6aa846" transform="rotate(15 20 40)"/><ellipse class="turtle-flipper-fr" cx="50" cy="16" rx="7" ry="3" fill="#6aa846" transform="rotate(10 50 16)"/><ellipse class="turtle-flipper-br" cx="48" cy="38" rx="7" ry="3" fill="#6aa846" transform="rotate(-10 48 38)"/><ellipse cx="35" cy="27" rx="20" ry="15" fill="url(#tShell)"/><path d="M35 14 L28 22 L35 27 L42 22Z" fill="#5a9a3c" stroke="#4a7a28" stroke-width="0.5" opacity="0.6"/><path d="M28 22 L20 27 L28 34 L35 27Z" fill="#5a9a3c" stroke="#4a7a28" stroke-width="0.5" opacity="0.6"/><path d="M42 22 L50 27 L42 34 L35 27Z" fill="#5a9a3c" stroke="#4a7a28" stroke-width="0.5" opacity="0.6"/><path d="M28 34 L22 38 L30 40 L35 27Z" fill="#5a9a3c" stroke="#4a7a28" stroke-width="0.5" opacity="0.4"/><path d="M42 34 L48 38 L40 40 L35 27Z" fill="#5a9a3c" stroke="#4a7a28" stroke-width="0.5" opacity="0.4"/><ellipse cx="12" cy="24" rx="9" ry="7" fill="#7ab856"/><circle cx="8" cy="22" r="2.8" fill="white"/><circle cx="7.5" cy="21.5" r="1.7" fill="#1a2a1e"/><circle cx="7" cy="21" r="0.6" fill="white"/><path d="M6 27 Q8 29 11 27" fill="none" stroke="#3d6428" stroke-width="0.8" stroke-linecap="round"/><path d="M52 25 Q56 24 58 26 Q56 28 52 27Z" fill="#6aa846" opacity="0.6"/></svg>';
+
+const turtleQuotes = [
+  "Slow and steady\u2026 you know the rest.",
+  "Just passing through. Nice garden you got.",
+  "I\u2019ve been swimming for 80 years. Still enjoying it.",
+  "Remember: patience grows the best herbs.",
+  "Namaste, little fishies.",
+  "The ocean is vast, but this garden is lovely.",
+  "Don\u2019t rush. Good things take time.",
+];
+
+let turtleTimer = null;
+
+function scheduleTurtle() {
+  turtleTimer = setTimeout(spawnTurtle, 90000 + Math.random() * 90000);
+}
+
+function spawnTurtle() {
+  if (window.innerWidth < 768) { scheduleTurtle(); return; }
+
+  const el = document.createElement("div");
+  el.className = "sea-turtle";
+
+  const quote = turtleQuotes[Math.floor(Math.random() * turtleQuotes.length)];
+  el.innerHTML = '<div class="turtle-body">' + turtleSvg + '</div><div class="turtle-speech">' + quote + '</div>';
+  document.body.appendChild(el);
+
+  // Swim from left to right or right to left
+  const fromLeft = Math.random() > 0.5;
+  const y = 100 + Math.random() * (window.innerHeight - 250);
+  let x = fromLeft ? -80 : window.innerWidth + 80;
+  const targetX = fromLeft ? window.innerWidth + 80 : -80;
+  const scaleX = fromLeft ? -1 : 1;
+  const speed = 0.4 + Math.random() * 0.3;
+
+  el.style.transform = "translate(" + x + "px," + y + "px) scaleX(" + scaleX + ")";
+
+  // Show quote when turtle is in the middle third of the screen
+  let quoteShown = false;
+  let quoteHidden = false;
+
+  function turtleMove() {
+    x += (fromLeft ? speed : -speed);
+    const wave = Math.sin(Date.now() * 0.001) * 4;
+    el.style.transform = "translate(" + x.toFixed(1) + "px," + (y + wave).toFixed(1) + "px) scaleX(" + scaleX + ")";
+
+    const screenX = fromLeft ? x : window.innerWidth - x;
+    if (!quoteShown && screenX > window.innerWidth * 0.3) {
+      el.classList.add("talking");
+      el.querySelector(".turtle-speech").style.transform = "translateX(-50%) scaleX(" + scaleX + ")";
+      quoteShown = true;
+    }
+    if (!quoteHidden && screenX > window.innerWidth * 0.7) {
+      el.classList.remove("talking");
+      quoteHidden = true;
+    }
+
+    if ((fromLeft && x > window.innerWidth + 100) || (!fromLeft && x < -100)) {
+      el.remove();
+      scheduleTurtle();
+      return;
+    }
+    requestAnimationFrame(turtleMove);
+  }
+  requestAnimationFrame(turtleMove);
+}
+
+// First turtle after 60-120 seconds
+setTimeout(scheduleTurtle, 60000 + Math.random() * 60000);
+
+// --- Shark Attack! ---
+
+const sharkSvg = '<svg viewBox="0 0 90 50" fill="none"><defs><linearGradient id="sBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6b7b8d"/><stop offset="50%" stop-color="#566878"/><stop offset="100%" stop-color="#8899aa"/></linearGradient></defs><g class="shark-tail-g"><path d="M8 25 L-6 10 Q2 18 0 25 Q2 32 -6 40Z" fill="#556677"/></g><path d="M38 6 L42 -6 L48 6Z" fill="#556677"/><path d="M10 25 Q18 8 45 6 Q72 4 82 22 L84 25 L82 28 Q72 46 45 44 Q18 42 10 25Z" fill="url(#sBody)"/><path d="M18 30 Q40 42 75 32 Q55 40 22 34Z" fill="#99aabb" opacity="0.3"/><line x1="60" y1="16" x2="60" y2="30" stroke="#4a5a6a" stroke-width="0.8"/><line x1="57" y1="17" x2="57" y2="29" stroke="#4a5a6a" stroke-width="0.8"/><line x1="54" y1="18" x2="54" y2="28" stroke="#4a5a6a" stroke-width="0.8"/><circle cx="73" cy="19" r="4.5" fill="white"/><circle cx="74.5" cy="18.5" r="3" fill="#cc0000"/><circle cx="75.5" cy="17.5" r="1" fill="#ff4444" opacity="0.8"/><path d="M78 27 L80 32 L82 27 L84 32 L85 25" fill="white"/><path d="M78 23 L80 18 L82 23 L84 18 L85 25" fill="white"/><path d="M20 28 Q15 36 22 40 Q24 34 22 28Z" fill="#667788" opacity="0.6"/></svg>';
+
+let shark = { el: null, x: 0, y: 0, active: false, frame: null };
+let sharkTimer = null;
+let sharkKills = 0;
+
+function scheduleShark() {
+  sharkTimer = setTimeout(spawnShark, 120000 + Math.random() * 120000);
+}
+
+function spawnShark() {
+  if (window.innerWidth < 768 || !fish.el || shark.active) { scheduleShark(); return; }
+
+  shark.active = true;
+  const el = document.createElement("div");
+  el.className = "shark";
+  el.innerHTML = '<div class="shark-glow"></div><div class="shark-body">' + sharkSvg + '</div>';
+  el.onclick = killShark;
+  document.body.appendChild(el);
+  shark.el = el;
+
+  // Enter from opposite side of Bubbles
+  const fromLeft = fish.x > window.innerWidth / 2;
+  shark.x = fromLeft ? -100 : window.innerWidth + 100;
+  shark.y = 60 + Math.random() * (window.innerHeight - 180);
+  el.style.transform = "translate(" + shark.x + "px," + shark.y + "px)";
+
+  // Panic mode for Bubbles and Buddy!
+  fish.el.classList.add("panicking");
+  if (buddy.el) buddy.el.classList.add("panicking");
+
+  // Add exclamation mark to Bubbles
+  const exclaim = document.createElement("div");
+  exclaim.className = "fish-exclaim";
+  exclaim.textContent = "!!";
+  fish.el.appendChild(exclaim);
+
+  shark.frame = requestAnimationFrame(sharkChase);
+
+  // Shark gives up after 12 seconds if not killed
+  setTimeout(() => {
+    if (shark.active && shark.el) {
+      sharkRetreat();
+    }
+  }, 12000);
+}
+
+function sharkChase(time) {
+  if (!shark.el || !shark.active) return;
+
+  // Chase Bubbles
+  const dx = fish.x - shark.x;
+  const dy = fish.y - shark.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  const speed = 1.8;
+  if (dist > 10) {
+    shark.x += (dx / dist) * speed;
+    shark.y += (dy / dist) * speed;
+  }
+
+  const facingLeft = dx < 0;
+  const scaleX = facingLeft ? -1 : 1;
+  const wave = Math.sin(time * 0.005) * 3;
+  shark.el.style.transform =
+    "translate(" + shark.x.toFixed(1) + "px," + (shark.y + wave).toFixed(1) + "px) scaleX(" + scaleX + ")";
+
+  // Make Bubbles flee!
+  if (fish.moving || true) {
+    const fleeX = fish.x + (fish.x - shark.x) * 0.5;
+    const fleeY = fish.y + (fish.y - shark.y) * 0.5;
+    fish.tx = Math.max(40, Math.min(window.innerWidth - 60, fleeX));
+    fish.ty = Math.max(50, Math.min(window.innerHeight - 60, fleeY));
+    fish.facingLeft = fish.tx < fish.x;
+    fish.moving = true;
+    fish.speed = 3;
+    fish.el.classList.remove("paused", "talking");
+  }
+
+  // Also make buddy flee
+  if (buddy.el && buddy.moving !== undefined) {
+    const bFleeX = buddy.x + (buddy.x - shark.x) * 0.3;
+    const bFleeY = buddy.y + (buddy.y - shark.y) * 0.3;
+    buddy.tx = Math.max(40, Math.min(window.innerWidth - 60, bFleeX));
+    buddy.ty = Math.max(50, Math.min(window.innerHeight - 60, bFleeY));
+    buddy.facingLeft = buddy.tx < buddy.x;
+    buddy.moving = true;
+    buddy.speed = 2.5;
+    buddy.el.classList.remove("paused", "talking");
+  }
+
+  shark.frame = requestAnimationFrame(sharkChase);
+}
+
+function killShark(e) {
+  e.stopPropagation();
+  if (!shark.el || !shark.active) return;
+  shark.active = false;
+  cancelAnimationFrame(shark.frame);
+
+  sharkKills++;
+
+  // Death animation
+  shark.el.classList.add("hit");
+  shark.el.style.setProperty("--pos",
+    "translate(" + shark.x.toFixed(0) + "px," + shark.y.toFixed(0) + "px)");
+
+  // Score popup
+  const score = document.createElement("div");
+  score.className = "shark-score";
+  score.style.left = shark.x + "px";
+  score.style.top = shark.y + "px";
+  const messages = ["Got \u2018em!", "BOOM!", "Nice shot!", "Sushi time!", "Begone!", "K.O.!"];
+  score.textContent = messages[Math.floor(Math.random() * messages.length)];
+  document.body.appendChild(score);
+  setTimeout(() => score.remove(), 1200);
+
+  // Burst of bubbles at shark position
+  for (let i = 0; i < 12; i++) {
+    setTimeout(() => {
+      const bub = document.createElement("div");
+      bub.className = "fish-bub";
+      bub.style.position = "fixed";
+      bub.style.left = (shark.x + 20 + Math.random() * 40) + "px";
+      bub.style.top = (shark.y + 10 + Math.random() * 20) + "px";
+      const size = 4 + Math.random() * 8;
+      bub.style.width = size + "px";
+      bub.style.height = size + "px";
+      bub.style.setProperty("--bx", "0px");
+      bub.style.setProperty("--by", "0px");
+      bub.style.setProperty("--drift", (Math.random() - 0.5) * 50 + "px");
+      bub.style.setProperty("--dur", (1 + Math.random()) + "s");
+      document.body.appendChild(bub);
+      setTimeout(() => bub.remove(), 2000);
+    }, i * 50);
+  }
+
+  // Remove shark after animation
+  setTimeout(() => {
+    if (shark.el) shark.el.remove();
+    shark.el = null;
+  }, 800);
+
+  // End panic
+  endSharkPanic();
+
+  // Bubbles does a victory spin
+  if (fish.el) {
+    fish.el.classList.add("trick-spin");
+    setTimeout(() => fish.el.classList.remove("trick-spin"), 700);
+  }
+
+  // Schedule next shark
+  scheduleShark();
+}
+
+function sharkRetreat() {
+  if (!shark.el || !shark.active) return;
+  shark.active = false;
+  cancelAnimationFrame(shark.frame);
+
+  // Swim away
+  const retreatX = shark.x > window.innerWidth / 2 ? window.innerWidth + 120 : -120;
+  const startX = shark.x;
+  const startY = shark.y;
+  const start = Date.now();
+
+  function retreatMove() {
+    const t = Math.min(1, (Date.now() - start) / 2000);
+    const x = startX + (retreatX - startX) * t;
+    const scaleX = retreatX > startX ? 1 : -1;
+    shark.el.style.transform = "translate(" + x.toFixed(0) + "px," + startY + "px) scaleX(" + scaleX + ")";
+    if (t < 1) {
+      requestAnimationFrame(retreatMove);
+    } else {
+      shark.el.remove();
+      shark.el = null;
+      scheduleShark();
+    }
+  }
+  requestAnimationFrame(retreatMove);
+  endSharkPanic();
+}
+
+function endSharkPanic() {
+  if (fish.el) {
+    fish.el.classList.remove("panicking");
+    const exclaim = fish.el.querySelector(".fish-exclaim");
+    if (exclaim) exclaim.remove();
+    fish.speed = 1.2;
+  }
+  if (buddy.el) {
+    buddy.el.classList.remove("panicking");
+    buddy.speed = 0.8;
+  }
+}
+
+// First shark after 2-4 minutes
+setTimeout(scheduleShark, 120000 + Math.random() * 120000);
 
 // --- Helpers ---
 
