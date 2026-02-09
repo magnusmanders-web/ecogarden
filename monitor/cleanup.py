@@ -117,4 +117,21 @@ def get_storage_stats(config):
     stats["photos"]["size_mb"] = round(stats["photos"]["size_mb"], 1)
     stats["timelapse"]["size_mb"] = round(stats["timelapse"]["size_mb"], 1)
 
+    # Totals and forecast
+    total_mb = stats["photos"]["size_mb"] + stats["timelapse"]["size_mb"]
+    stats["total_size_mb"] = round(total_mb, 1)
+    stats["max_storage_mb"] = config["storage"].get("max_storage_mb", 8192)
+
+    days_tracked = stats["photos"]["days"]
+    if days_tracked > 0:
+        stats["daily_avg_mb"] = round(total_mb / days_tracked, 1)
+        remaining = stats["max_storage_mb"] - total_mb
+        if stats["daily_avg_mb"] > 0 and remaining > 0:
+            stats["forecast_days_to_full"] = int(remaining / stats["daily_avg_mb"])
+        else:
+            stats["forecast_days_to_full"] = None
+    else:
+        stats["daily_avg_mb"] = 0
+        stats["forecast_days_to_full"] = None
+
     return stats
