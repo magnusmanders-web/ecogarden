@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadStatus();
   loadThumbnails(currentDate);
   loadTimelapses();
+  loadLightState();
 
   setInterval(loadStatus, 60000);
   setInterval(loadLatestPhoto, 300000);
@@ -212,6 +213,34 @@ function updatePlantCards(plants) {
 }
 
 // --- Actions ---
+
+function loadLightState() {
+  fetch("/api/light")
+    .then((r) => r.json())
+    .then((data) => {
+      const btn = document.getElementById("light-btn");
+      if (data.state != null) {
+        btn.className = "header-btn " + (data.state ? "light-on" : "light-off");
+      }
+    })
+    .catch(() => {});
+}
+
+function toggleLight() {
+  const btn = document.getElementById("light-btn");
+  btn.disabled = true;
+  fetch("/api/light/toggle", { method: "POST" })
+    .then((r) => r.json())
+    .then((data) => {
+      btn.disabled = false;
+      if (data.state != null) {
+        btn.className = "header-btn " + (data.state ? "light-on" : "light-off");
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+    });
+}
 
 function manualCapture() {
   const btn = document.getElementById("capture-btn");

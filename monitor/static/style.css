@@ -108,6 +108,20 @@ header h1 {
   cursor: not-allowed;
 }
 
+.header-btn.light-on {
+  background: rgba(255,220,50,0.35);
+  border-color: rgba(255,220,50,0.6);
+}
+
+.header-btn.light-off {
+  opacity: 0.6;
+}
+
+.header-right {
+  display: flex;
+  gap: 6px;
+}
+
 /* ---- Main ---- */
 
 main {
