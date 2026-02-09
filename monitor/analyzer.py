@@ -29,6 +29,83 @@ def _load_previous_analysis(config):
         return None
 
 
+def _enrich_with_light_data(config, sensors):
+    """Fetch light sensor data from InfluxDB and add to sensors dict."""
+    influx = config.get("influxdb")
+    if not influx or not influx.get("token"):
+        return
+
+    import urllib.request
+
+    try:
+        # Get latest light value
+        flux_latest = f'''from(bucket: "{influx['bucket']}")
+  |> range(start: -1h)
+  |> filter(fn: (r) => r["entity_id"] == "ecogarden_light_level")
+  |> filter(fn: (r) => r["_field"] == "value")
+  |> last()'''
+
+        url = f"{influx['url']}/api/v2/query?org={influx['org']}"
+        req = urllib.request.Request(
+            url,
+            data=flux_latest.encode(),
+            headers={
+                "Authorization": f"Token {influx['token']}",
+                "Content-Type": "application/vnd.flux",
+                "Accept": "application/csv",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            csv_data = resp.read().decode()
+
+        for line in csv_data.strip().split("\n"):
+            if line.startswith(","):
+                parts = line.split(",")
+                try:
+                    value = float(parts[6])
+                    sensors["light_pct"] = round(value * 100, 1)
+                except (ValueError, IndexError):
+                    pass
+
+        # Get 24h summary (min, max, avg)
+        flux_summary = f'''from(bucket: "{influx['bucket']}")
+  |> range(start: -24h)
+  |> filter(fn: (r) => r["entity_id"] == "ecogarden_light_level")
+  |> filter(fn: (r) => r["_field"] == "value")'''
+
+        for stat_name, stat_fn in [("min", "min"), ("max", "max"), ("mean", "mean")]:
+            query = flux_summary + f'\n  |> {stat_fn}()\n  |> yield(name: "{stat_name}")'
+            req = urllib.request.Request(
+                url,
+                data=query.encode(),
+                headers={
+                    "Authorization": f"Token {influx['token']}",
+                    "Content-Type": "application/vnd.flux",
+                    "Accept": "application/csv",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                csv_data = resp.read().decode()
+
+            for line in csv_data.strip().split("\n"):
+                if line.startswith(","):
+                    parts = line.split(",")
+                    try:
+                        value = float(parts[6])
+                        sensors[f"light_{stat_name}"] = round(value * 100, 1)
+                    except (ValueError, IndexError):
+                        pass
+
+        if all(k in sensors for k in ("light_min", "light_max", "light_mean")):
+            sensors["light_history"] = (
+                f"min {sensors['light_min']}%, max {sensors['light_max']}%, "
+                f"avg {sensors['light_mean']}%"
+            )
+
+    except Exception as e:
+        log.warning("Failed to fetch light data from InfluxDB: %s", e)
+
+
 def _build_prompt(plants, sensors, herbs, previous):
     """Build the analysis prompt with plant context."""
     plant_lines = []
@@ -47,6 +124,10 @@ def _build_prompt(plants, sensors, herbs, previous):
     sensor_lines = []
     if sensors.get("temp_c") is not None:
         sensor_lines.append(f"- Water temp: {sensors['temp_c']}C")
+    if sensors.get("light_pct") is not None:
+        sensor_lines.append(f"- Light level: {sensors['light_pct']}% (from TSL2561 sensor above grow lights)")
+    if sensors.get("light_history"):
+        sensor_lines.append(f"- Light 24h summary: {sensors['light_history']}")
 
     previous_context = ""
     if previous:
@@ -125,6 +206,9 @@ def analyze_plants(config, state):
     mqtt = state.get("mqtt_client")
     if mqtt:
         sensors = mqtt.get_latest_sensor_data()
+
+    # Fetch light sensor data from InfluxDB
+    _enrich_with_light_data(config, sensors)
 
     # Load previous analysis for comparison
     previous = _load_previous_analysis(config)
