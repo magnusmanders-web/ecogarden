@@ -14,8 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(loadStatus, 60000);
   setInterval(loadLatestPhoto, 300000);
 
-  // Fish buddy (desktop only) — delay so page renders first
+  // Aquatic friends (desktop only) — delay so page renders first
   setTimeout(initFish, 2500);
+  setTimeout(initBuddy, 18000);
+  setTimeout(spawnTurtle, 45000);
+  setTimeout(spawnShark, 80000);
 });
 
 // --- Data ---
@@ -992,8 +995,7 @@ function buddyClick() {
   }, 700);
 }
 
-// Spawn buddy after 15-25 seconds
-setTimeout(initBuddy, 15000 + Math.random() * 10000);
+// Buddy is spawned from DOMContentLoaded
 
 // --- Sea Turtle ---
 
@@ -1065,8 +1067,7 @@ function spawnTurtle() {
   requestAnimationFrame(turtleMove);
 }
 
-// First turtle after 40-70 seconds
-setTimeout(spawnTurtle, 40000 + Math.random() * 30000);
+// Turtle is spawned from DOMContentLoaded
 
 // --- Shark Attack! ---
 
@@ -1267,8 +1268,7 @@ function endSharkPanic() {
   }
 }
 
-// First shark after 70-110 seconds
-setTimeout(spawnShark, 70000 + Math.random() * 40000);
+// Shark is spawned from DOMContentLoaded
 
 // --- Helpers ---
 
