@@ -191,6 +191,30 @@ def create_app(config, state):
             mimetype="multipart/x-mixed-replace; boundary=frame",
         )
 
+    @app.route("/api/light", methods=["GET"])
+    def api_light():
+        """Get current growlight state from EcoGarden device."""
+        import urllib.request
+        try:
+            with urllib.request.urlopen(
+                f"http://{config['ecogarden']['device_ip']}/rpc/LED.Get", timeout=5
+            ) as resp:
+                return Response(resp.read(), mimetype="application/json")
+        except Exception:
+            return jsonify({"state": None, "error": "Device unreachable"}), 503
+
+    @app.route("/api/light/toggle", methods=["POST"])
+    def api_light_toggle():
+        """Toggle the EcoGarden growlight."""
+        import urllib.request
+        try:
+            with urllib.request.urlopen(
+                f"http://{config['ecogarden']['device_ip']}/rpc/LED.Toggle", timeout=5
+            ) as resp:
+                return Response(resp.read(), mimetype="application/json")
+        except Exception:
+            return jsonify({"error": "Device unreachable"}), 503
+
     @app.route("/capture", methods=["POST"])
     def manual_capture():
         """Trigger a manual photo capture."""
