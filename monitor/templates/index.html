@@ -5,35 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#1a5f2a">
+  <meta name="theme-color" content="#0a1a0f">
   <title>EcoGarden</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <!-- Animated background foliage -->
+  <div class="bg-foliage">
+    <div class="leaf leaf-1"></div>
+    <div class="leaf leaf-2"></div>
+    <div class="leaf leaf-3"></div>
+  </div>
+
   <header>
     <div class="header-content">
       <div class="header-left">
-        <h1>EcoGarden</h1>
-        <span id="mqtt-status" class="status-dot disconnected"></span>
+        <div class="logo-mark">
+          <svg viewBox="0 0 28 28" fill="none"><path d="M14 3C14 3 8 8 8 14c0 3.3 2.7 6 6 6s6-2.7 6-6c0-6-6-11-6-11z" fill="currentColor" opacity="0.3"/><path d="M14 7c0 0-4 3.5-4 8 0 2.2 1.8 4 4 4s4-1.8 4-4c0-4.5-4-8-4-8z" fill="currentColor"/><line x1="14" y1="19" x2="14" y2="26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <h1>EcoGarden</h1>
+          <div class="header-sub">
+            <span id="mqtt-status" class="status-dot disconnected"></span>
+            <span class="header-sub-text" id="header-sub-text">Connecting...</span>
+          </div>
+        </div>
       </div>
       <div class="header-right">
-        <button id="light-btn" class="header-btn light-off" onclick="toggleLight()">Light</button>
-        <button id="capture-btn" class="header-btn" onclick="manualCapture()">Capture</button>
+        <button id="light-btn" class="ctrl-btn light-off" onclick="toggleLight()" title="Toggle growlight">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+        <button id="capture-btn" class="ctrl-btn" onclick="manualCapture()" title="Take photo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
       </div>
     </div>
   </header>
 
   <main>
-    <!-- Sensor bar -->
-    <div class="sensor-bar">
-      <div class="sensor-item">
-        <span class="sensor-val" id="sensor-temp">--</span>
-        <span class="sensor-lbl">&deg;C</span>
+    <!-- Sensor orbs -->
+    <div class="sensor-orbs anim-rise" style="--d:0">
+      <div class="sensor-orb">
+        <div class="orb-ring"></div>
+        <span class="orb-val" id="sensor-temp">--</span>
+        <span class="orb-lbl">&deg;C water</span>
       </div>
-      <div class="sensor-divider"></div>
-      <div class="sensor-item">
-        <span class="sensor-val health-score" id="overall-health">--</span>
-        <span class="sensor-lbl">health</span>
+      <div class="sensor-orb health-orb">
+        <div class="orb-ring"></div>
+        <span class="orb-val health-score" id="overall-health">--</span>
+        <span class="orb-lbl">health</span>
       </div>
     </div>
 
@@ -43,19 +66,27 @@
     </div>
 
     <!-- Latest Photo -->
-    <section class="card photo-card">
+    <section class="card photo-card anim-rise" style="--d:1">
       <div class="photo-frame">
         <img id="latest-photo" src="" alt="Latest plant photo" onclick="openFullscreen(this)">
-        <div id="photo-no-data" class="no-data">No photos yet</div>
-        <span id="photo-time" class="photo-time"></span>
+        <div id="photo-no-data" class="no-data">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" class="no-data-icon"><rect x="6" y="10" width="36" height="28" rx="3"/><circle cx="18" cy="22" r="4"/><path d="M42 34l-10-10-8 8-4-4-14 10"/></svg>
+          <span>No photos yet</span>
+        </div>
+        <div class="photo-overlay">
+          <span id="photo-time" class="photo-time"></span>
+        </div>
       </div>
       <div class="thumbnail-strip" id="thumbnail-strip"></div>
     </section>
 
     <!-- AI Summary -->
-    <section id="ai-summary" class="card ai-card" style="display:none;">
+    <section id="ai-summary" class="card ai-card anim-rise" style="display:none; --d:2">
       <div class="ai-header">
-        <span class="ai-badge">AI</span>
+        <div class="ai-badge">
+          <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><path d="M8 1.5a.5.5 0 01.5.5v2a.5.5 0 01-1 0V2a.5.5 0 01.5-.5zM3.146 3.146a.5.5 0 01.708 0l1.5 1.5a.5.5 0 11-.708.708l-1.5-1.5a.5.5 0 010-.708zM1.5 8a.5.5 0 01.5-.5h2a.5.5 0 010 1H2a.5.5 0 01-.5-.5zm10 0a.5.5 0 01.5-.5h2a.5.5 0 010 1h-2a.5.5 0 01-.5-.5zM4.646 11.354a.5.5 0 010-.708l1.5-1.5a.5.5 0 01.708.708l-1.5 1.5a.5.5 0 01-.708 0zm6-.708a.5.5 0 01.708 0l1.5 1.5a.5.5 0 01-.708.708l-1.5-1.5a.5.5 0 010-.708zM8 12.5a.5.5 0 01.5.5v2a.5.5 0 01-1 0v-2a.5.5 0 01.5-.5zM8 5a3 3 0 100 6 3 3 0 000-6z"/></svg>
+          AI Analysis
+        </div>
         <span id="ai-summary-date" class="ai-date"></span>
       </div>
       <p id="ai-summary-text" class="ai-text"></p>
@@ -67,12 +98,15 @@
     </section>
 
     <!-- Light Sensor History -->
-    <section class="card light-card">
+    <section class="card glass-card light-card anim-rise" style="--d:3">
       <div class="card-header">
-        <h2>Light Sensor</h2>
-        <div class="light-range-toggle">
-          <button class="range-btn active" data-range="24h" onclick="loadLightHistory('24h', this)">24h</button>
-          <button class="range-btn" data-range="7d" onclick="loadLightHistory('7d', this)">7d</button>
+        <h2>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="card-icon"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/></svg>
+          Light Sensor
+        </h2>
+        <div class="toggle-pills">
+          <button class="pill active" data-range="24h" onclick="loadLightHistory('24h', this)">24h</button>
+          <button class="pill" data-range="7d" onclick="loadLightHistory('7d', this)">7d</button>
         </div>
       </div>
       <div class="light-chart-container">
@@ -82,20 +116,26 @@
     </section>
 
     <!-- Timelapse -->
-    <section class="card timelapse-card">
+    <section class="card glass-card timelapse-card anim-rise" style="--d:4">
       <div class="card-header">
-        <h2>Timelapse</h2>
+        <h2>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="card-icon"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></svg>
+          Timelapse
+        </h2>
         <div class="timelapse-controls">
           <select id="timelapse-type" onchange="loadTimelapses()">
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
           </select>
           <select id="timelapse-select" onchange="playTimelapse()"></select>
-          <button id="timelapse-gen-btn" class="gen-btn" onclick="generateTimelapse()">Generate</button>
+          <button id="timelapse-gen-btn" class="gen-btn" onclick="generateTimelapse()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 2l10 6-10 6V2z"/></svg>
+            Generate
+          </button>
         </div>
       </div>
-      <div id="timelapse-gen-status" class="timelapse-gen-status" style="display:none;">
-        <span class="spinner"></span>
+      <div id="timelapse-gen-status" class="gen-status" style="display:none;">
+        <div class="gen-spinner"></div>
         <span id="timelapse-gen-label">Generating timelapse...</span>
       </div>
       <div class="timelapse-player">
@@ -105,29 +145,41 @@
     </section>
 
     <!-- Storage Status -->
-    <section class="card storage-card">
+    <section class="card glass-card storage-card anim-rise" style="--d:5">
       <div class="card-header">
-        <h2>Storage</h2>
+        <h2>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="card-icon"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+          Storage
+        </h2>
       </div>
       <div id="storage-info" class="storage-info">
         <div class="storage-stats">
-          <span id="storage-photos">-- photos</span>
-          <span id="storage-size">-- MB</span>
-          <span id="storage-timelapses">-- timelapses</span>
+          <div class="stat-chip"><span class="stat-val" id="storage-photos">--</span> photos</div>
+          <div class="stat-chip"><span class="stat-val" id="storage-size">--</span> MB</div>
+          <div class="stat-chip"><span class="stat-val" id="storage-timelapses">--</span> videos</div>
         </div>
         <div class="storage-bar">
-          <div id="storage-bar-fill" class="storage-bar-fill"></div>
+          <div id="storage-bar-fill" class="storage-bar-fill">
+            <div class="storage-bar-glow"></div>
+          </div>
         </div>
         <div id="storage-forecast" class="storage-forecast"></div>
       </div>
     </section>
+
+    <footer class="site-footer">
+      <span>EcoGarden Monitor</span>
+    </footer>
   </main>
 
   <!-- Fullscreen overlay -->
   <div id="fullscreen-overlay" class="fullscreen-overlay" onclick="closeFullscreen()">
     <button class="fullscreen-close" onclick="closeFullscreen()">&times;</button>
     <img id="fullscreen-img" src="" alt="Full size photo" onclick="event.stopPropagation()">
-    <button id="fullscreen-delete-btn" class="fullscreen-delete" onclick="event.stopPropagation(); deleteFullscreenPhoto()">Delete</button>
+    <button id="fullscreen-delete-btn" class="fullscreen-delete" onclick="event.stopPropagation(); deleteFullscreenPhoto()">
+      <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"/></svg>
+      Delete
+    </button>
   </div>
 
   <script src="/static/app.js"></script>

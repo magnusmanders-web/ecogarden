@@ -142,28 +142,28 @@ function loadStorageStats() {
   fetch("/api/storage")
     .then((r) => r.json())
     .then((data) => {
-      document.getElementById("storage-photos").textContent = data.photos.count + " photos";
-      document.getElementById("storage-size").textContent = data.total_size_mb + " MB";
+      document.getElementById("storage-photos").textContent = data.photos.count;
+      document.getElementById("storage-size").textContent = data.total_size_mb;
       const tlCount = (data.timelapse.daily || 0) + (data.timelapse.weekly || 0);
-      document.getElementById("storage-timelapses").textContent = tlCount + " timelapses";
+      document.getElementById("storage-timelapses").textContent = tlCount;
 
       const pct = data.max_storage_mb > 0
         ? Math.min(100, (data.total_size_mb / data.max_storage_mb) * 100)
         : 0;
       const fill = document.getElementById("storage-bar-fill");
       fill.style.width = pct.toFixed(1) + "%";
-      fill.className = "storage-bar-fill" + (pct > 80 ? " warning" : pct > 95 ? " critical" : "");
+      fill.className = "storage-bar-fill" + (pct > 95 ? " critical" : pct > 80 ? " warning" : "");
 
       const forecast = document.getElementById("storage-forecast");
       if (data.daily_avg_mb > 0) {
         let text = "~" + data.daily_avg_mb + " MB/day";
         if (data.forecast_days_to_full != null) {
-          text += ", " + data.forecast_days_to_full + " days until full";
+          text += " \u00b7 " + data.forecast_days_to_full + " days until full";
         }
-        text += " (" + pct.toFixed(0) + "% of " + (data.max_storage_mb / 1024).toFixed(0) + " GB)";
+        text += " \u00b7 " + pct.toFixed(0) + "% of " + (data.max_storage_mb / 1024).toFixed(0) + " GB";
         forecast.textContent = text;
       } else {
-        forecast.textContent = "No data yet";
+        forecast.textContent = "No usage data yet";
       }
     })
     .catch(() => {});
@@ -173,7 +173,7 @@ function loadStorageStats() {
 
 function loadLightHistory(range, btn) {
   if (btn) {
-    document.querySelectorAll(".range-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".pill").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
   }
 
@@ -227,17 +227,26 @@ function renderLightChart(svg, points, range) {
 
   let html = "";
 
+  // Defs for gradient fill
+  html += '<defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">';
+  html += '<stop offset="0%" stop-color="rgba(46,204,113,0.2)"/>';
+  html += '<stop offset="100%" stop-color="rgba(46,204,113,0.01)"/>';
+  html += '</linearGradient></defs>';
+
   // Grid lines and Y labels
   for (let pct = 0; pct <= 100; pct += 25) {
     const y = padTop + chartH - (pct / 100) * chartH;
-    html += '<line x1="' + padLeft + '" y1="' + y + '" x2="' + (w - padRight) + '" y2="' + y + '" stroke="#e0e0e0" stroke-width="0.5"/>';
-    html += '<text x="' + (padLeft - 4) + '" y="' + (y + 3) + '" text-anchor="end" fill="#888" font-size="10">' + pct + "%</text>";
+    html += '<line x1="' + padLeft + '" y1="' + y + '" x2="' + (w - padRight) + '" y2="' + y + '" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>';
+    html += '<text x="' + (padLeft - 4) + '" y="' + (y + 3) + '" text-anchor="end" fill="#4a6b52" font-size="10" font-family="DM Sans, sans-serif">' + pct + "%</text>";
   }
 
   // Area fill
-  html += '<path d="' + areaPath + '" fill="rgba(34,128,74,0.12)"/>';
+  html += '<path d="' + areaPath + '" fill="url(#areaGrad)"/>';
   // Line
-  html += '<polyline points="' + linePoints + '" fill="none" stroke="#22804a" stroke-width="1.8" stroke-linejoin="round"/>';
+  html += '<polyline points="' + linePoints + '" fill="none" stroke="#2ecc71" stroke-width="1.8" stroke-linejoin="round"/>';
+
+  // Glow effect on the line
+  html += '<polyline points="' + linePoints + '" fill="none" stroke="#2ecc71" stroke-width="4" stroke-linejoin="round" opacity="0.15" filter="blur(3px)"/>';
 
   // Time labels (show ~5 labels)
   const labelCount = 5;
@@ -252,7 +261,7 @@ function renderLightChart(svg, points, range) {
     } else {
       label = (t.getMonth() + 1) + "/" + t.getDate();
     }
-    html += '<text x="' + x + '" y="' + (h - 4) + '" text-anchor="middle" fill="#888" font-size="10">' + label + "</text>";
+    html += '<text x="' + x + '" y="' + (h - 4) + '" text-anchor="middle" fill="#4a6b52" font-size="10" font-family="DM Sans, sans-serif">' + label + "</text>";
   }
 
   svg.innerHTML = html;
@@ -401,6 +410,8 @@ function updateSensors(sensors) {
 function updateMqttStatus(connected) {
   const dot = document.getElementById("mqtt-status");
   dot.className = "status-dot " + (connected ? "connected" : "disconnected");
+  const text = document.getElementById("header-sub-text");
+  text.textContent = connected ? "Connected" : "Disconnected";
 }
 
 function updateAlerts(alerts) {
@@ -429,7 +440,7 @@ function updateAISummary(data) {
   const healthEl = document.getElementById("overall-health");
   if (data.overall_health != null) {
     healthEl.textContent = data.overall_health;
-    healthEl.className = "sensor-val health-score health-" + data.overall_health;
+    healthEl.className = "orb-val health-score health-" + data.overall_health;
   }
 }
 
@@ -496,7 +507,7 @@ function loadLightState() {
     .then((data) => {
       const btn = document.getElementById("light-btn");
       if (data.state != null) {
-        btn.className = "header-btn " + (data.state ? "light-on" : "light-off");
+        btn.className = "ctrl-btn " + (data.state ? "light-on" : "light-off");
       }
     })
     .catch(() => {});
@@ -510,7 +521,7 @@ function toggleLight() {
     .then((data) => {
       btn.disabled = false;
       if (data.state != null) {
-        btn.className = "header-btn " + (data.state ? "light-on" : "light-off");
+        btn.className = "ctrl-btn " + (data.state ? "light-on" : "light-off");
       }
     })
     .catch(() => {
@@ -521,17 +532,14 @@ function toggleLight() {
 function manualCapture() {
   const btn = document.getElementById("capture-btn");
   btn.disabled = true;
-  btn.textContent = "...";
   fetch("/capture", { method: "POST" })
     .then((r) => r.json())
     .then(() => {
-      btn.textContent = "Capture";
       btn.disabled = false;
       loadLatestPhoto();
       loadThumbnails(currentDate);
     })
     .catch(() => {
-      btn.textContent = "Capture";
       btn.disabled = false;
     });
 }
