@@ -931,6 +931,98 @@ h2 {
   border-color: var(--red);
 }
 
+/* ---- Fish Buddy (desktop only) ---- */
+
+.fish {
+  display: none;
+  position: fixed;
+  z-index: 90;
+  pointer-events: none;
+  transition: none;
+  will-change: transform;
+}
+
+.fish-body {
+  width: 48px;
+  height: 30px;
+  animation: fishWiggle 0.6s ease-in-out infinite;
+  transition: transform 0.3s;
+}
+
+.fish-body svg { width: 100%; height: 100% }
+
+.fish.paused .fish-body { animation: fishIdle 2s ease-in-out infinite }
+
+@keyframes fishWiggle {
+  0%, 100% { transform: rotate(0deg) translateY(0) }
+  25% { transform: rotate(1.5deg) translateY(-1px) }
+  75% { transform: rotate(-1.5deg) translateY(1px) }
+}
+
+@keyframes fishIdle {
+  0%, 100% { transform: rotate(0deg) translateY(0) }
+  50% { transform: rotate(0deg) translateY(-3px) }
+}
+
+.fish-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 10px 14px;
+  width: 220px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
+  transform: translateX(-50%) translateY(6px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.fish.talking .fish-bubble {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.fish-bubble-text {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+.fish-bubble-text strong {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.fish-bubble-tail {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  margin-left: -6px;
+  width: 12px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.fish-bubble-tail::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 1px;
+  width: 10px;
+  height: 10px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  transform: rotate(45deg);
+}
+
 /* ---- Desktop ---- */
 
 @media (min-width: 768px) {
@@ -950,6 +1042,8 @@ h2 {
   .thumb-wrapper img { width: 68px; height: 46px }
 
   .plant-card:hover { transform: translateY(-3px) }
+
+  .fish { display: block }
 }
 
 @media (min-width: 1024px) {
