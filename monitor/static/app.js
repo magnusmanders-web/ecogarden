@@ -566,15 +566,16 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeFullscreen();
 });
 
-// --- Fish Buddy ---
+// --- Fish Buddy: "Bubbles" the Aquaponic Koi ---
 
 const fishTips = {
   oregano: [
     { type: "recipe", text: "<strong>Oregano oil pasta:</strong> Saut\u00e9 garlic in olive oil, toss with spaghetti, and finish with torn fresh oregano leaves." },
-    { type: "recipe", text: "<strong>Greek salad boost:</strong> Add fresh oregano to cucumber, tomato, feta & olives. It's the authentic touch!" },
-    { type: "recipe", text: "<strong>Oregano butter:</strong> Mix chopped oregano into softened butter with lemon zest. Great on grilled fish." },
+    { type: "recipe", text: "<strong>Greek salad boost:</strong> Fresh oregano with cucumber, tomato, feta & olives \u2014 the authentic touch!" },
+    { type: "recipe", text: "<strong>Oregano butter:</strong> Mix chopped oregano into softened butter with lemon zest. Great on grilled fish\u2026 no, not me!" },
+    { type: "recipe", text: "<strong>Chimichurri:</strong> Blend oregano, parsley, garlic, red wine vinegar & olive oil. Perfect on steak!" },
     { type: "tip", text: "<strong>Harvest tip:</strong> Pinch oregano stems just above a leaf pair to encourage bushy growth." },
-    { type: "tip", text: "<strong>Did you know?</strong> Oregano's flavor intensifies when it flowers. Harvest just before for peak taste!" },
+    { type: "tip", text: "<strong>Did you know?</strong> Oregano's flavor intensifies near flowering. Harvest just before for peak taste!" },
     { type: "tip", text: "<strong>Pro tip:</strong> Oregano prefers slightly drier conditions. Don't overwater between cycles." },
   ],
   basil: [
@@ -582,6 +583,7 @@ const fishTips = {
     { type: "recipe", text: "<strong>Thai basil stir-fry:</strong> Works great in pad kra pao! Toss basil in at the very end." },
     { type: "recipe", text: "<strong>Basil lemonade:</strong> Muddle basil leaves with lemon juice, add simple syrup & cold water. So refreshing!" },
     { type: "recipe", text: "<strong>Pesto time!</strong> Blend basil, pine nuts, parmesan, garlic & olive oil. Freeze extra in ice cube trays." },
+    { type: "recipe", text: "<strong>Basil ice cream:</strong> Steep basil in warm cream, strain, churn. Trust me on this one." },
     { type: "tip", text: "<strong>Pinch it!</strong> Always harvest basil from the top down. Pinch above a leaf pair to get two new branches." },
     { type: "tip", text: "<strong>Flower watch:</strong> Remove flower buds immediately \u2014 they make the leaves bitter." },
     { type: "tip", text: "<strong>Warmth lover:</strong> Basil thrives in warm water. Keep temps above 20\u00b0C for happy leaves." },
@@ -590,147 +592,260 @@ const fishTips = {
     { type: "recipe", text: "<strong>Garden wraps:</strong> Use large lettuce leaves as wraps for chicken, avocado & pickled veggies!" },
     { type: "recipe", text: "<strong>Green smoothie:</strong> Blend lettuce with banana, apple & ginger. Mild flavor, great nutrition." },
     { type: "recipe", text: "<strong>Grilled lettuce?!</strong> Yes! Halve a head, grill 60 sec per side, drizzle with Caesar dressing." },
+    { type: "recipe", text: "<strong>Lettuce soup:</strong> Saut\u00e9 onion, add lettuce & stock, blend. Surprisingly elegant." },
     { type: "tip", text: "<strong>Cut-and-come-again:</strong> Harvest outer leaves first. The center keeps growing for weeks!" },
     { type: "tip", text: "<strong>Bolting alert:</strong> If lettuce starts stretching tall, it's bolting. Harvest immediately \u2014 it'll turn bitter." },
     { type: "tip", text: "<strong>Light matters:</strong> Lettuce prefers 12\u201314 hours of light. Too much causes stress and bitterness." },
   ],
   general: [
-    { type: "tip", text: "<strong>Aquaponic fact:</strong> Your fish feed the plants, and the plants clean the water. It's a tiny ecosystem!" },
+    { type: "tip", text: "<strong>Aquaponic fact:</strong> I feed the plants, and the plants clean my water. We're a team!" },
     { type: "tip", text: "<strong>Water temp:</strong> Ideal range is 18\u201326\u00b0C. Outside that, both fish and plants get stressed." },
     { type: "tip", text: "<strong>Harvest mornings!</strong> Herbs have the most essential oils in the morning before the heat." },
     { type: "tip", text: "<strong>Rotate harvests:</strong> Don't strip one plant bare. Take a little from each to keep them all healthy." },
     { type: "recipe", text: "<strong>Herb ice cubes:</strong> Chop fresh herbs, pack into ice cube trays, cover with olive oil & freeze." },
     { type: "recipe", text: "<strong>Herb salt:</strong> Blend fresh herbs with coarse sea salt, spread on a tray & dry. Keeps for months!" },
+    { type: "recipe", text: "<strong>Garden tea:</strong> Steep fresh herbs in hot water \u2014 basil-mint is my favorite combo." },
+    { type: "tip", text: "<strong>Root check:</strong> Healthy aquaponic roots are white. Brown or slimy? Time to investigate." },
   ]
 };
 
-let fishState = { x: 0, y: 0, targetX: 0, targetY: 0, facingLeft: false, moving: false, tipIndex: 0 };
-let fishAnimFrame = null;
+const fishNames = [
+  "Bubbles says\u2026", "Chef Bubbles says\u2026", "Bubbles knows\u2026",
+  "Your fish friend says\u2026", "Bubbles recommends\u2026",
+];
+
+let fish = {
+  el: null, x: 0, y: 0, tx: 0, ty: 0, angle: 0,
+  facingLeft: true, moving: false, speed: 1.2,
+  tipIdx: 0, trickCooldown: 0, mouseX: 0, mouseY: 0,
+  bubbleTimer: 0, lastBubble: 0, dashUntil: 0,
+};
+let fishFrame = null;
 let fishTipTimer = null;
 let knownHerbs = [];
 
 function initFish() {
-  // Only run on desktop
   if (window.innerWidth < 768) return;
 
-  const fish = document.getElementById("fish");
-  if (!fish) return;
+  fish.el = document.getElementById("fish");
+  if (!fish.el) return;
 
-  // Ensure visibility
-  fish.style.display = "block";
+  fish.el.style.display = "block";
+  fish.el.style.left = "0px";
+  fish.el.style.top = "0px";
 
-  // Start position: center of viewport
-  fishState.x = window.innerWidth / 2;
-  fishState.y = window.innerHeight / 2;
-  fish.style.left = "0px";
-  fish.style.top = "0px";
-  fish.style.transform = "translate(" + fishState.x + "px," + fishState.y + "px)";
+  // Start off-screen right, swim in
+  fish.x = window.innerWidth + 40;
+  fish.y = window.innerHeight * 0.4;
+  fish.el.style.transform = "translate(" + fish.x + "px," + fish.y + "px)";
 
-  swimToNext();
+  // Track mouse for fish awareness
+  document.addEventListener("mousemove", (e) => {
+    fish.mouseX = e.clientX;
+    fish.mouseY = e.clientY;
+  });
+
+  // First swim target: toward center
+  fish.tx = window.innerWidth * 0.6;
+  fish.ty = window.innerHeight * 0.35;
+  fish.moving = true;
+  fish.facingLeft = true;
+
+  fishFrame = requestAnimationFrame(fishLoop);
   scheduleTip();
 }
 
-function swimToNext() {
-  const fish = document.getElementById("fish");
-  if (!fish) return;
+function fishPickTarget() {
+  const margin = 90;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
 
-  // Pick a random target within viewport, avoiding top header area
-  const margin = 80;
-  fishState.targetX = margin + Math.random() * (window.innerWidth - margin * 2 - 60);
-  fishState.targetY = 80 + Math.random() * (window.innerHeight - 200);
-  fishState.moving = true;
-  fish.classList.remove("paused");
+  // Occasionally swim toward mouse
+  if (Math.random() < 0.15 && fish.mouseX > 0) {
+    fish.tx = fish.mouseX + (Math.random() - 0.5) * 120;
+    fish.ty = fish.mouseY + (Math.random() - 0.5) * 80;
+  } else {
+    fish.tx = margin + Math.random() * (w - margin * 2 - 80);
+    fish.ty = 70 + Math.random() * (h - 220);
+  }
 
-  // Determine direction for flipping
-  fishState.facingLeft = fishState.targetX < fishState.x;
+  // Clamp within bounds
+  fish.tx = Math.max(50, Math.min(w - 100, fish.tx));
+  fish.ty = Math.max(60, Math.min(h - 100, fish.ty));
 
-  animateFish();
+  fish.facingLeft = fish.tx < fish.x;
+  fish.moving = true;
+  fish.speed = 0.8 + Math.random() * 1.2;
+  fish.el.classList.remove("paused", "dashing");
+
+  // Random chance of a dash (speed burst)
+  if (Math.random() < 0.12) {
+    fish.speed = 3.5;
+    fish.dashUntil = Date.now() + 800;
+    fish.el.classList.add("dashing");
+  }
 }
 
-function animateFish() {
-  const fish = document.getElementById("fish");
-  if (!fish || !fishState.moving) return;
+function fishLoop(time) {
+  if (!fish.el) return;
+  fishFrame = requestAnimationFrame(fishLoop);
 
-  const dx = fishState.targetX - fishState.x;
-  const dy = fishState.targetY - fishState.y;
+  // Check dash expiry
+  if (fish.dashUntil && Date.now() > fish.dashUntil) {
+    fish.dashUntil = 0;
+    fish.speed = Math.max(fish.speed * 0.4, 0.8);
+    fish.el.classList.remove("dashing");
+  }
+
+  if (!fish.moving) return;
+
+  const dx = fish.tx - fish.x;
+  const dy = fish.ty - fish.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  if (dist < 3) {
-    fishState.moving = false;
-    fishState.x = fishState.targetX;
-    fishState.y = fishState.targetY;
-    fish.classList.add("paused");
+  if (dist < 4) {
+    fish.moving = false;
+    fish.x = fish.tx;
+    fish.y = fish.ty;
+    fish.el.classList.add("paused");
+    fish.el.classList.remove("dashing");
 
-    // Wait a bit, then swim again
-    setTimeout(swimToNext, 2000 + Math.random() * 4000);
+    // Random pause, then swim again
+    const pause = 1500 + Math.random() * 3500;
+    setTimeout(fishPickTarget, pause);
     return;
   }
 
-  // Ease toward target (smooth, organic feel)
-  const speed = Math.min(1.5, dist * 0.02);
-  fishState.x += (dx / dist) * speed;
-  fishState.y += (dy / dist) * speed;
+  // Smooth movement with ease
+  const ease = Math.min(fish.speed, dist * 0.025);
+  fish.x += (dx / dist) * ease;
+  fish.y += (dy / dist) * ease;
 
-  // Apply slight vertical wave while swimming
-  const wave = Math.sin(Date.now() * 0.003) * 2;
+  // Perpendicular wave for organic swimming
+  const perpX = -dy / dist;
+  const perpY = dx / dist;
+  const waveAmt = Math.sin(time * 0.004) * 3.5;
+  const drawX = fish.x + perpX * waveAmt;
+  const drawY = fish.y + perpY * waveAmt;
 
-  const scaleX = fishState.facingLeft ? 1 : -1;
-  fish.style.transform = "translate(" + fishState.x + "px," + (fishState.y + wave) + "px) scaleX(" + scaleX + ")";
+  // Tilt toward movement direction
+  const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+  fish.angle += (targetAngle - fish.angle) * 0.08;
+  const tilt = Math.max(-18, Math.min(18, fish.angle * 0.3));
 
-  fishAnimFrame = requestAnimationFrame(animateFish);
+  const scaleX = fish.facingLeft ? 1 : -1;
+  fish.el.style.transform =
+    "translate(" + drawX.toFixed(1) + "px," + drawY.toFixed(1) + "px) " +
+    "scaleX(" + scaleX + ") rotate(" + tilt.toFixed(1) + "deg)";
+
+  // Spawn bubbles while swimming
+  if (time - fish.lastBubble > 400 + Math.random() * 300) {
+    spawnBubble();
+    fish.lastBubble = time;
+  }
+}
+
+function spawnBubble() {
+  const container = document.getElementById("fish-bubbles");
+  if (!container) return;
+
+  const bub = document.createElement("div");
+  bub.className = "fish-bub";
+  const size = 3 + Math.random() * 5;
+  bub.style.width = size + "px";
+  bub.style.height = size + "px";
+  bub.style.setProperty("--bx", (25 + Math.random() * 20) + "px");
+  bub.style.setProperty("--by", (10 + Math.random() * 20) + "px");
+  bub.style.setProperty("--drift", (Math.random() - 0.5) * 30 + "px");
+  bub.style.setProperty("--dur", (1 + Math.random() * 0.8) + "s");
+  container.appendChild(bub);
+
+  setTimeout(() => bub.remove(), 2000);
 }
 
 function scheduleTip() {
-  const delay = 25000 + Math.random() * 15000; // 25-40 seconds
+  const delay = 20000 + Math.random() * 15000;
   fishTipTimer = setTimeout(showFishTip, delay);
 }
 
 function showFishTip() {
-  const fish = document.getElementById("fish");
-  const bubble = document.getElementById("fish-bubble");
-  const textEl = document.getElementById("fish-bubble-text");
-  if (!fish || !bubble || !textEl) return;
+  if (!fish.el) return;
+  const headerEl = document.getElementById("fish-speech-header");
+  const textEl = document.getElementById("fish-speech-text");
+  const speechEl = document.getElementById("fish-speech");
+  if (!headerEl || !textEl || !speechEl) return;
 
-  // Build pool of tips from known herbs + general
+  // Build pool
   let pool = [...fishTips.general];
   knownHerbs.forEach((h) => {
     const key = h.toLowerCase();
     if (fishTips[key]) pool = pool.concat(fishTips[key]);
   });
 
-  if (pool.length === 0) {
-    scheduleTip();
-    return;
+  if (pool.length === 0) { scheduleTip(); return; }
+
+  // Shuffle on first pass through
+  if (fish.tipIdx === 0) {
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
   }
 
-  // Pick a tip (cycle through, then reshuffle)
-  const tip = pool[fishState.tipIndex % pool.length];
-  fishState.tipIndex++;
+  const tip = pool[fish.tipIdx % pool.length];
+  fish.tipIdx++;
+
+  // Set header style based on type
+  const name = fishNames[Math.floor(Math.random() * fishNames.length)];
+  const isRecipe = tip.type === "recipe";
+  headerEl.className = "fish-speech-header " + (isRecipe ? "recipe-header" : "tip-header");
+  headerEl.innerHTML = (isRecipe ? "\uD83C\uDF73 " : "\uD83C\uDF31 ") + name;
 
   textEl.innerHTML = tip.text;
 
-  // Pause swimming and show bubble
-  fishState.moving = false;
-  cancelAnimationFrame(fishAnimFrame);
-  fish.classList.add("paused", "talking");
+  // Pause swimming and show speech bubble
+  fish.moving = false;
+  cancelAnimationFrame(fishFrame);
+  fish.el.classList.add("paused", "talking");
 
-  // Flip bubble if fish is facing right (SVG is flipped)
-  const bubbleEl = document.querySelector(".fish-bubble");
-  if (!fishState.facingLeft) {
-    bubbleEl.style.transform = "translateX(-50%) scaleX(-1)";
-    textEl.style.transform = "scaleX(-1)";
-  } else {
-    bubbleEl.style.transform = "translateX(-50%)";
-    textEl.style.transform = "none";
+  // Do a little bounce for recipes, stay calm for tips
+  if (isRecipe) {
+    fish.el.classList.add("trick-bounce");
+    setTimeout(() => fish.el.classList.remove("trick-bounce"), 600);
   }
 
-  // Hide after 6 seconds
+  // Fix bubble orientation when fish faces right (SVG flipped)
+  if (!fish.facingLeft) {
+    speechEl.style.transform = "translateX(-50%) translateY(0) scale(1) scaleX(-1)";
+    textEl.style.transform = "scaleX(-1)";
+    headerEl.style.transform = "scaleX(-1)";
+  } else {
+    speechEl.style.transform = "";
+    textEl.style.transform = "";
+    headerEl.style.transform = "";
+  }
+
+  // Hide after 7 seconds
   setTimeout(() => {
-    fish.classList.remove("talking");
-    // Resume swimming after bubble fades
-    setTimeout(swimToNext, 600);
+    fish.el.classList.remove("talking");
+    setTimeout(() => {
+      fishFrame = requestAnimationFrame(fishLoop);
+      fishPickTarget();
+    }, 500);
     scheduleTip();
-  }, 6000);
+  }, 7000);
+}
+
+// Click the fish for a happy spin!
+function fishClick() {
+  if (!fish.el) return;
+  fish.el.classList.add("trick-spin");
+  setTimeout(() => fish.el.classList.remove("trick-spin"), 700);
+
+  // Burst of bubbles
+  for (let i = 0; i < 6; i++) {
+    setTimeout(spawnBubble, i * 80);
+  }
 }
 
 // Hook into plant data loading to learn which herbs we have
@@ -743,10 +858,11 @@ updatePlantCards = function(plants) {
 // Pause fish when tab is hidden
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
-    cancelAnimationFrame(fishAnimFrame);
+    cancelAnimationFrame(fishFrame);
     clearTimeout(fishTipTimer);
-  } else if (window.innerWidth >= 768) {
-    swimToNext();
+  } else if (fish.el) {
+    fishFrame = requestAnimationFrame(fishLoop);
+    if (!fish.moving) fishPickTarget();
     scheduleTip();
   }
 });
