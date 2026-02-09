@@ -1,7 +1,9 @@
 import logging
 import os
+import re
+import threading
 
-from flask import Flask, Response, jsonify, render_template, send_file
+from flask import Flask, Response, jsonify, render_template, request, send_file
 
 log = logging.getLogger(__name__)
 
@@ -224,5 +226,173 @@ def create_app(config, state):
             state["last_capture"] = path
             return jsonify({"status": "ok", "path": os.path.basename(path)})
         return jsonify({"status": "error", "message": "Capture failed"}), 500
+
+    # --- Feature: Delete Photos ---
+
+    @app.route("/api/photos/<date_str>/<filename>", methods=["DELETE"])
+    def api_delete_photo(date_str, filename):
+        """Delete a single photo. Path traversal protection via realpath."""
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+            return jsonify({"error": "Invalid date format"}), 400
+        if not re.match(r"^[\w\-]+\.jpg$", filename):
+            return jsonify({"error": "Invalid filename"}), 400
+
+        base_dir = os.path.realpath(config["storage"]["photo_dir"])
+        filepath = os.path.realpath(os.path.join(base_dir, date_str, filename))
+        if not filepath.startswith(base_dir + os.sep) or not os.path.isfile(filepath):
+            return "Not found", 404
+
+        os.remove(filepath)
+
+        # Remove empty date directory
+        date_dir = os.path.dirname(filepath)
+        if os.path.isdir(date_dir) and not os.listdir(date_dir):
+            os.rmdir(date_dir)
+
+        return jsonify({"status": "ok"})
+
+    # --- Feature: Light Sensor History ---
+
+    @app.route("/api/sensors/light/history")
+    def api_light_history():
+        """Query InfluxDB for light sensor history."""
+        range_param = request.args.get("range", "24h")
+        if range_param not in ("24h", "7d"):
+            return jsonify({"error": "range must be 24h or 7d"}), 400
+
+        influx = config.get("influxdb")
+        if not influx or not influx.get("token"):
+            return jsonify({"range": range_param, "points": [], "error": "InfluxDB not configured"})
+
+        window = "5m" if range_param == "24h" else "30m"
+        flux_range = "-24h" if range_param == "24h" else "-7d"
+
+        flux_query = f'''
+from(bucket: "{influx['bucket']}")
+  |> range(start: {flux_range})
+  |> filter(fn: (r) => r["entity_id"] == "ecogarden_light_level")
+  |> filter(fn: (r) => r["_field"] == "value")
+  |> aggregateWindow(every: {window}, fn: mean, createEmpty: false)
+  |> yield(name: "mean")
+'''
+
+        try:
+            import urllib.request
+            url = f"{influx['url']}/api/v2/query?org={influx['org']}"
+            req = urllib.request.Request(
+                url,
+                data=flux_query.encode(),
+                headers={
+                    "Authorization": f"Token {influx['token']}",
+                    "Content-Type": "application/vnd.flux",
+                    "Accept": "application/csv",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                csv_data = resp.read().decode()
+
+            # Parse InfluxDB annotated CSV:
+            # Lines starting with '#' are annotations (skip)
+            # First non-annotation line is header (find column indices)
+            # Data rows start with empty first field
+            points = []
+            header = None
+            for line in csv_data.strip().split("\n"):
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split(",")
+                if header is None:
+                    # This is the header row
+                    header = {col: idx for idx, col in enumerate(parts)}
+                    continue
+                # Data row - must start with empty field
+                if parts[0] != "":
+                    continue
+                try:
+                    time_idx = header.get("_time")
+                    value_idx = header.get("_value")
+                    if time_idx is not None and value_idx is not None:
+                        time_val = parts[time_idx]
+                        value = parts[value_idx]
+                        if time_val and value:
+                            points.append({"time": time_val, "value": round(float(value), 2)})
+                except (ValueError, IndexError):
+                    continue
+
+            return jsonify({"range": range_param, "points": points})
+
+        except Exception as e:
+            log.warning("InfluxDB light history query failed: %s", e)
+            return jsonify({"range": range_param, "points": [], "error": str(e)})
+
+    # --- Feature: On-demand Timelapse Generation ---
+
+    timelapse_status = {"generating": False, "type": None, "label": None, "error": None, "result": None}
+    timelapse_lock = threading.Lock()
+
+    @app.route("/api/timelapse/generate", methods=["POST"])
+    def api_timelapse_generate():
+        """Start background timelapse generation."""
+        with timelapse_lock:
+            if timelapse_status["generating"]:
+                return jsonify({"error": "Already generating", "label": timelapse_status["label"]}), 409
+
+        data = request.get_json(silent=True) or {}
+
+        if "date" in data:
+            gen_type = "daily"
+            label = data["date"]
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", label):
+                return jsonify({"error": "Invalid date format"}), 400
+        elif "year" in data and "week" in data:
+            gen_type = "weekly"
+            try:
+                year = int(data["year"])
+                week = int(data["week"])
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid year/week"}), 400
+            label = f"{year}-W{week:02d}"
+        else:
+            return jsonify({"error": "Provide 'date' or 'year'+'week'"}), 400
+
+        with timelapse_lock:
+            timelapse_status.update({
+                "generating": True,
+                "type": gen_type,
+                "label": label,
+                "error": None,
+                "result": None,
+            })
+
+        def _generate():
+            try:
+                from timelapse import generate_daily_timelapse, generate_weekly_timelapse
+                if gen_type == "daily":
+                    result = generate_daily_timelapse(config, label)
+                else:
+                    result = generate_weekly_timelapse(config, year, week)
+
+                with timelapse_lock:
+                    timelapse_status["result"] = os.path.basename(result) if result else None
+                    if not result:
+                        timelapse_status["error"] = "Not enough photos"
+            except Exception as e:
+                log.error("Timelapse generation failed: %s", e)
+                with timelapse_lock:
+                    timelapse_status["error"] = str(e)
+            finally:
+                with timelapse_lock:
+                    timelapse_status["generating"] = False
+
+        thread = threading.Thread(target=_generate, daemon=True)
+        thread.start()
+
+        return jsonify({"status": "started", "type": gen_type, "label": label})
+
+    @app.route("/api/timelapse/status")
+    def api_timelapse_status():
+        """Get current timelapse generation status."""
+        with timelapse_lock:
+            return jsonify(dict(timelapse_status))
 
     return app

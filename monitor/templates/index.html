@@ -66,6 +66,21 @@
       <div id="plant-cards"></div>
     </section>
 
+    <!-- Light Sensor History -->
+    <section class="card light-card">
+      <div class="card-header">
+        <h2>Light Sensor</h2>
+        <div class="light-range-toggle">
+          <button class="range-btn active" data-range="24h" onclick="loadLightHistory('24h', this)">24h</button>
+          <button class="range-btn" data-range="7d" onclick="loadLightHistory('7d', this)">7d</button>
+        </div>
+      </div>
+      <div class="light-chart-container">
+        <svg id="light-chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+        <div id="light-no-data" class="no-data" style="display:none;">No light data</div>
+      </div>
+    </section>
+
     <!-- Timelapse -->
     <section class="card timelapse-card">
       <div class="card-header">
@@ -76,7 +91,12 @@
             <option value="weekly">Weekly</option>
           </select>
           <select id="timelapse-select" onchange="playTimelapse()"></select>
+          <button id="timelapse-gen-btn" class="header-btn" onclick="generateTimelapse()">Generate</button>
         </div>
+      </div>
+      <div id="timelapse-gen-status" class="timelapse-gen-status" style="display:none;">
+        <span class="spinner"></span>
+        <span id="timelapse-gen-label">Generating timelapse...</span>
       </div>
       <div class="timelapse-player">
         <video id="timelapse-video" controls playsinline>
@@ -85,11 +105,31 @@
         <div id="timelapse-no-data" class="no-data">No timelapses yet</div>
       </div>
     </section>
+
+    <!-- Storage Status -->
+    <section class="card storage-card">
+      <div class="card-header">
+        <h2>Storage</h2>
+      </div>
+      <div id="storage-info" class="storage-info">
+        <div class="storage-stats">
+          <span id="storage-photos">-- photos</span>
+          <span id="storage-size">-- MB</span>
+          <span id="storage-timelapses">-- timelapses</span>
+        </div>
+        <div class="storage-bar">
+          <div id="storage-bar-fill" class="storage-bar-fill"></div>
+        </div>
+        <div id="storage-forecast" class="storage-forecast"></div>
+      </div>
+    </section>
   </main>
 
   <!-- Fullscreen overlay -->
   <div id="fullscreen-overlay" class="fullscreen-overlay" onclick="closeFullscreen()">
-    <img id="fullscreen-img" src="" alt="Full size photo">
+    <button class="fullscreen-close" onclick="closeFullscreen()">&times;</button>
+    <img id="fullscreen-img" src="" alt="Full size photo" onclick="event.stopPropagation()">
+    <button id="fullscreen-delete-btn" class="fullscreen-delete" onclick="event.stopPropagation(); deleteFullscreenPhoto()">Delete</button>
   </div>
 
   <script src="/static/app.js"></script>
