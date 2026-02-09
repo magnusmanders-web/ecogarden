@@ -489,7 +489,7 @@ h2 {
 
 /* ---- Plant Cards ---- */
 
-.plants-section {
+#plant-cards {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -941,7 +941,7 @@ h2 {
   .sensor-orbs { gap: 16px }
   .sensor-orb { padding: 24px 20px }
 
-  .plants-section {
+  #plant-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
