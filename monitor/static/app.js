@@ -563,6 +563,193 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeFullscreen();
 });
 
+// --- Fish Buddy ---
+
+const fishTips = {
+  oregano: [
+    { type: "recipe", text: "<strong>Oregano oil pasta:</strong> Saut\u00e9 garlic in olive oil, toss with spaghetti, and finish with torn fresh oregano leaves." },
+    { type: "recipe", text: "<strong>Greek salad boost:</strong> Add fresh oregano to cucumber, tomato, feta & olives. It's the authentic touch!" },
+    { type: "recipe", text: "<strong>Oregano butter:</strong> Mix chopped oregano into softened butter with lemon zest. Great on grilled fish." },
+    { type: "tip", text: "<strong>Harvest tip:</strong> Pinch oregano stems just above a leaf pair to encourage bushy growth." },
+    { type: "tip", text: "<strong>Did you know?</strong> Oregano's flavor intensifies when it flowers. Harvest just before for peak taste!" },
+    { type: "tip", text: "<strong>Pro tip:</strong> Oregano prefers slightly drier conditions. Don't overwater between cycles." },
+  ],
+  basil: [
+    { type: "recipe", text: "<strong>Caprese perfection:</strong> Layer thick tomato slices, fresh mozzarella & basil. Drizzle with good olive oil." },
+    { type: "recipe", text: "<strong>Thai basil stir-fry:</strong> Works great in pad kra pao! Toss basil in at the very end." },
+    { type: "recipe", text: "<strong>Basil lemonade:</strong> Muddle basil leaves with lemon juice, add simple syrup & cold water. So refreshing!" },
+    { type: "recipe", text: "<strong>Pesto time!</strong> Blend basil, pine nuts, parmesan, garlic & olive oil. Freeze extra in ice cube trays." },
+    { type: "tip", text: "<strong>Pinch it!</strong> Always harvest basil from the top down. Pinch above a leaf pair to get two new branches." },
+    { type: "tip", text: "<strong>Flower watch:</strong> Remove flower buds immediately \u2014 they make the leaves bitter." },
+    { type: "tip", text: "<strong>Warmth lover:</strong> Basil thrives in warm water. Keep temps above 20\u00b0C for happy leaves." },
+  ],
+  lettuce: [
+    { type: "recipe", text: "<strong>Garden wraps:</strong> Use large lettuce leaves as wraps for chicken, avocado & pickled veggies!" },
+    { type: "recipe", text: "<strong>Green smoothie:</strong> Blend lettuce with banana, apple & ginger. Mild flavor, great nutrition." },
+    { type: "recipe", text: "<strong>Grilled lettuce?!</strong> Yes! Halve a head, grill 60 sec per side, drizzle with Caesar dressing." },
+    { type: "tip", text: "<strong>Cut-and-come-again:</strong> Harvest outer leaves first. The center keeps growing for weeks!" },
+    { type: "tip", text: "<strong>Bolting alert:</strong> If lettuce starts stretching tall, it's bolting. Harvest immediately \u2014 it'll turn bitter." },
+    { type: "tip", text: "<strong>Light matters:</strong> Lettuce prefers 12\u201314 hours of light. Too much causes stress and bitterness." },
+  ],
+  general: [
+    { type: "tip", text: "<strong>Aquaponic fact:</strong> Your fish feed the plants, and the plants clean the water. It's a tiny ecosystem!" },
+    { type: "tip", text: "<strong>Water temp:</strong> Ideal range is 18\u201326\u00b0C. Outside that, both fish and plants get stressed." },
+    { type: "tip", text: "<strong>Harvest mornings!</strong> Herbs have the most essential oils in the morning before the heat." },
+    { type: "tip", text: "<strong>Rotate harvests:</strong> Don't strip one plant bare. Take a little from each to keep them all healthy." },
+    { type: "recipe", text: "<strong>Herb ice cubes:</strong> Chop fresh herbs, pack into ice cube trays, cover with olive oil & freeze." },
+    { type: "recipe", text: "<strong>Herb salt:</strong> Blend fresh herbs with coarse sea salt, spread on a tray & dry. Keeps for months!" },
+  ]
+};
+
+let fishState = { x: 0, y: 0, targetX: 0, targetY: 0, facingLeft: false, moving: false, tipIndex: 0 };
+let fishAnimFrame = null;
+let fishTipTimer = null;
+let knownHerbs = [];
+
+function initFish() {
+  // Only run on desktop
+  if (window.innerWidth < 768) return;
+
+  const fish = document.getElementById("fish");
+  if (!fish) return;
+
+  // Start position: right side, middle-ish
+  fishState.x = window.innerWidth - 120;
+  fishState.y = window.innerHeight * 0.5;
+  fish.style.transform = "translate(" + fishState.x + "px," + fishState.y + "px)";
+
+  swimToNext();
+
+  // Show a tip every 25-40 seconds
+  scheduleTip();
+}
+
+function swimToNext() {
+  const fish = document.getElementById("fish");
+  if (!fish) return;
+
+  // Pick a random target within viewport, avoiding top header area
+  const margin = 80;
+  fishState.targetX = margin + Math.random() * (window.innerWidth - margin * 2 - 60);
+  fishState.targetY = 80 + Math.random() * (window.innerHeight - 200);
+  fishState.moving = true;
+  fish.classList.remove("paused");
+
+  // Determine direction for flipping
+  fishState.facingLeft = fishState.targetX < fishState.x;
+
+  animateFish();
+}
+
+function animateFish() {
+  const fish = document.getElementById("fish");
+  if (!fish || !fishState.moving) return;
+
+  const dx = fishState.targetX - fishState.x;
+  const dy = fishState.targetY - fishState.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (dist < 3) {
+    fishState.moving = false;
+    fishState.x = fishState.targetX;
+    fishState.y = fishState.targetY;
+    fish.classList.add("paused");
+
+    // Wait a bit, then swim again
+    setTimeout(swimToNext, 2000 + Math.random() * 4000);
+    return;
+  }
+
+  // Ease toward target (smooth, organic feel)
+  const speed = Math.min(1.5, dist * 0.02);
+  fishState.x += (dx / dist) * speed;
+  fishState.y += (dy / dist) * speed;
+
+  // Apply slight vertical wave while swimming
+  const wave = Math.sin(Date.now() * 0.003) * 2;
+
+  const scaleX = fishState.facingLeft ? 1 : -1;
+  fish.style.transform = "translate(" + fishState.x + "px," + (fishState.y + wave) + "px) scaleX(" + scaleX + ")";
+
+  fishAnimFrame = requestAnimationFrame(animateFish);
+}
+
+function scheduleTip() {
+  const delay = 25000 + Math.random() * 15000; // 25-40 seconds
+  fishTipTimer = setTimeout(showFishTip, delay);
+}
+
+function showFishTip() {
+  const fish = document.getElementById("fish");
+  const bubble = document.getElementById("fish-bubble");
+  const textEl = document.getElementById("fish-bubble-text");
+  if (!fish || !bubble || !textEl) return;
+
+  // Build pool of tips from known herbs + general
+  let pool = [...fishTips.general];
+  knownHerbs.forEach((h) => {
+    const key = h.toLowerCase();
+    if (fishTips[key]) pool = pool.concat(fishTips[key]);
+  });
+
+  if (pool.length === 0) {
+    scheduleTip();
+    return;
+  }
+
+  // Pick a tip (cycle through, then reshuffle)
+  const tip = pool[fishState.tipIndex % pool.length];
+  fishState.tipIndex++;
+
+  textEl.innerHTML = tip.text;
+
+  // Pause swimming and show bubble
+  fishState.moving = false;
+  cancelAnimationFrame(fishAnimFrame);
+  fish.classList.add("paused", "talking");
+
+  // Flip bubble if fish is facing right (SVG is flipped)
+  const bubbleEl = document.querySelector(".fish-bubble");
+  if (!fishState.facingLeft) {
+    bubbleEl.style.transform = "translateX(-50%) scaleX(-1)";
+    textEl.style.transform = "scaleX(-1)";
+  } else {
+    bubbleEl.style.transform = "translateX(-50%)";
+    textEl.style.transform = "none";
+  }
+
+  // Hide after 6 seconds
+  setTimeout(() => {
+    fish.classList.remove("talking");
+    // Resume swimming after bubble fades
+    setTimeout(swimToNext, 600);
+    scheduleTip();
+  }, 6000);
+}
+
+// Hook into plant data loading to learn which herbs we have
+const _origUpdatePlantCards = updatePlantCards;
+updatePlantCards = function(plants) {
+  _origUpdatePlantCards(plants);
+  knownHerbs = plants.map((p) => p.species).filter(Boolean);
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Delay fish init so page loads first
+  setTimeout(initFish, 2000);
+});
+
+// Pause fish when tab is hidden
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    cancelAnimationFrame(fishAnimFrame);
+    clearTimeout(fishTipTimer);
+  } else if (window.innerWidth >= 768) {
+    swimToNext();
+    scheduleTip();
+  }
+});
+
 // --- Helpers ---
 
 function cap(s) {
