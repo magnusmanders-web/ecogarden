@@ -190,7 +190,9 @@ function loadLightHistory(range, btn) {
 
       svg.style.display = "block";
       noData.style.display = "none";
-      renderLightChart(svg, data.points, range);
+      // InfluxDB stores raw 0-1 values; scale to 0-100%
+      const scaled = data.points.map((p) => ({ time: p.time, value: p.value * 100 }));
+      renderLightChart(svg, scaled, range);
     })
     .catch(() => {
       document.getElementById("light-chart").style.display = "none";
