@@ -129,7 +129,9 @@ function playTimelapse() {
     noData.style.display = "block";
     return;
   }
-  video.src = "/timelapse/" + type + "/" + file;
+  // Cache-bust for regenerated timelapses
+  video.src = "/timelapse/" + type + "/" + file + "?t=" + Date.now();
+  video.load();
   video.style.display = "block";
   noData.style.display = "none";
 }
