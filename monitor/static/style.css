@@ -449,6 +449,28 @@ h2 {
 .timelapse-controls {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gen-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--green);
+  color: white;
+  cursor: pointer;
+}
+
+.gen-btn:hover {
+  background: var(--green-dark);
+  border-color: var(--green-dark);
+}
+
+.gen-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .timelapse-controls select {
