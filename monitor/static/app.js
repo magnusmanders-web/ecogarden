@@ -616,14 +616,17 @@ function initFish() {
   const fish = document.getElementById("fish");
   if (!fish) return;
 
-  // Start position: right side, middle-ish
-  fishState.x = window.innerWidth - 120;
-  fishState.y = window.innerHeight * 0.5;
+  // Ensure visibility
+  fish.style.display = "block";
+
+  // Start position: center of viewport
+  fishState.x = window.innerWidth / 2;
+  fishState.y = window.innerHeight / 2;
+  fish.style.left = "0px";
+  fish.style.top = "0px";
   fish.style.transform = "translate(" + fishState.x + "px," + fishState.y + "px)";
 
   swimToNext();
-
-  // Show a tip every 25-40 seconds
   scheduleTip();
 }
 
