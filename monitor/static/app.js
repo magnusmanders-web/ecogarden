@@ -306,9 +306,7 @@ function generateTimelapse() {
   let body;
 
   if (type === "daily") {
-    const selected = document.getElementById("timelapse-select").value;
-    const date = selected ? selected.replace(".mp4", "") : currentDate;
-    body = JSON.stringify({ date: date });
+    body = JSON.stringify({ date: currentDate });
   } else {
     // Derive ISO week from current date
     const d = new Date();
@@ -354,15 +352,39 @@ function pollTimelapseStatus() {
         clearInterval(timelapsePolling);
         timelapsePolling = null;
 
-        const status = document.getElementById("timelapse-gen-status");
+        const statusEl = document.getElementById("timelapse-gen-status");
         const btn = document.getElementById("timelapse-gen-btn");
-        status.style.display = "none";
+        statusEl.style.display = "none";
         btn.disabled = false;
 
         if (data.error) {
           alert("Timelapse failed: " + data.error);
         } else {
-          loadTimelapses();
+          // Reload list and select the newly generated file
+          const newFile = data.result;
+          fetch("/api/timelapse")
+            .then((r) => r.json())
+            .then((list) => {
+              const type = document.getElementById("timelapse-type").value;
+              const select = document.getElementById("timelapse-select");
+              const videos = list[type] || [];
+              select.innerHTML = "";
+              if (videos.length === 0) {
+                select.innerHTML = '<option value="">None</option>';
+                document.getElementById("timelapse-video").style.display = "none";
+                document.getElementById("timelapse-no-data").style.display = "block";
+                return;
+              }
+              videos.forEach((v) => {
+                const opt = document.createElement("option");
+                opt.value = v;
+                opt.textContent = v.replace(".mp4", "");
+                if (v === newFile) opt.selected = true;
+                select.appendChild(opt);
+              });
+              playTimelapse();
+            })
+            .catch(() => {});
         }
       }
     })
