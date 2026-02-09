@@ -40,7 +40,7 @@ mqtt:
 influxdb:
   url: "http://192.168.1.5:8086"
   # Token loaded from INFLUXDB_TOKEN env var (do not hardcode here)
-  org: "homeassistant"
+  org: "home"
   bucket: "homeassistant"
 
 ecogarden:
