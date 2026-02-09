@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setInterval(loadStatus, 60000);
   setInterval(loadLatestPhoto, 300000);
+
+  // Fish buddy (desktop only) — delay so page renders first
+  setTimeout(initFish, 2500);
 });
 
 // --- Data ---
@@ -733,11 +736,6 @@ updatePlantCards = function(plants) {
   _origUpdatePlantCards(plants);
   knownHerbs = plants.map((p) => p.species).filter(Boolean);
 };
-
-document.addEventListener("DOMContentLoaded", () => {
-  // Delay fish init so page loads first
-  setTimeout(initFish, 2000);
-});
 
 // Pause fish when tab is hidden
 document.addEventListener("visibilitychange", () => {

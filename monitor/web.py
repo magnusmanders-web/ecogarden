@@ -18,7 +18,8 @@ def create_app(config, state):
 
     @app.route("/")
     def index():
-        return render_template("index.html")
+        import time
+        return render_template("index.html", v=int(time.time()))
 
     @app.route("/api/status")
     def api_status():
