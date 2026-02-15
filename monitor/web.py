@@ -23,8 +23,22 @@ def create_app(config, state):
 
     @app.route("/api/status")
     def api_status():
+        import json as _json
+        import urllib.request
+
         mqtt = state.get("mqtt_client")
         sensors = mqtt.get_latest_sensor_data() if mqtt else {}
+
+        # Fallback: fetch temperature directly from device if MQTT has no data
+        if sensors.get("temp_c") is None:
+            try:
+                with urllib.request.urlopen(
+                    f"http://{config['ecogarden']['device_ip']}/hooks/water_temperature",
+                    timeout=3,
+                ) as resp:
+                    sensors["temp_c"] = _json.loads(resp.read()).get("value")
+            except Exception:
+                pass
 
         # Load latest analysis
         from analyzer import _load_previous_analysis
