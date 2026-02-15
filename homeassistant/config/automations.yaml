@@ -204,28 +204,91 @@
 # ECOGARDEN AUTOMATIONS
 # ----------------------------------------------
 
-# EcoGarden light schedule (on at 6 AM, off at 10 PM)
-- id: 'ecogarden_light_on'
-  alias: 'EcoGarden - Grow Light On'
-  description: 'Turn on grow light in the morning'
+# EcoGarden optimal grow light schedule
+# 16h photoperiod (06:00-22:00) with gradual sunrise/sunset ramp
+# Optimized for herbs (oregano, basil, lettuce) in 100% artificial light
+
+# --- Sunrise ramp (06:00 - 07:00) ---
+- id: 'ecogarden_sunrise_1'
+  alias: 'EcoGarden - Sunrise 10%'
   trigger:
     - platform: time
       at: '06:00:00'
   action:
-    - service: light.turn_on
-      target:
-        entity_id: light.ecogarden_growlight
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 0.1
 
-- id: 'ecogarden_light_off'
+- id: 'ecogarden_sunrise_2'
+  alias: 'EcoGarden - Sunrise 30%'
+  trigger:
+    - platform: time
+      at: '06:15:00'
+  action:
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 0.3
+
+- id: 'ecogarden_sunrise_3'
+  alias: 'EcoGarden - Sunrise 60%'
+  trigger:
+    - platform: time
+      at: '06:30:00'
+  action:
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 0.6
+
+- id: 'ecogarden_sunrise_4'
+  alias: 'EcoGarden - Full Intensity'
+  trigger:
+    - platform: time
+      at: '07:00:00'
+  action:
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 1.0
+
+# --- Sunset ramp (20:00 - 22:00) ---
+- id: 'ecogarden_sunset_1'
+  alias: 'EcoGarden - Sunset 60%'
+  trigger:
+    - platform: time
+      at: '20:30:00'
+  action:
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 0.6
+
+- id: 'ecogarden_sunset_2'
+  alias: 'EcoGarden - Sunset 30%'
+  trigger:
+    - platform: time
+      at: '21:00:00'
+  action:
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 0.3
+
+- id: 'ecogarden_sunset_3'
+  alias: 'EcoGarden - Sunset 10%'
+  trigger:
+    - platform: time
+      at: '21:30:00'
+  action:
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 0.1
+
+- id: 'ecogarden_sunset_off'
   alias: 'EcoGarden - Grow Light Off'
-  description: 'Turn off grow light at night'
   trigger:
     - platform: time
       at: '22:00:00'
   action:
-    - service: light.turn_off
-      target:
-        entity_id: light.ecogarden_growlight
+    - service: rest_command.ecogarden_set_brightness
+      data:
+        brightness: 0
 
 # EcoGarden feeding schedule (twice daily)
 - id: 'ecogarden_feed_morning'
