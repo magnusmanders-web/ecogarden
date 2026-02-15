@@ -42,6 +42,25 @@ firmware/
 ├── mos.yml.example  # Template config (in git)
 └── fs/index.html    # WiFi provisioning web UI served by device
 
+monitor/             # Raspberry Pi plant monitoring (Python 3, Flask)
+├── app.py           # Entry point: loads config, starts MQTT + scheduler + Flask
+├── config.py        # YAML config loader with validation
+├── config.yaml      # Plants, capture schedule, MQTT, InfluxDB settings
+├── herbs.yaml       # Herb care knowledge base (12 species)
+├── scheduler.py     # Background task scheduling (capture/timelapse/analysis/cleanup)
+├── capture.py       # Photo capture via fswebcam or OpenCV
+├── analyzer.py      # AI plant health analysis via Claude Sonnet
+├── timelapse.py     # Daily/weekly video generation with ffmpeg
+├── mqtt_client.py   # MQTT integration with EcoGarden ESP8266
+├── influxdb_writer.py # Health score metrics to InfluxDB
+├── knowledge.py     # Growth stage tracking from herbs.yaml
+├── cleanup.py       # 30-day photo retention with noon archives
+├── web.py           # Flask web dashboard + REST API + MJPEG stream
+├── deploy.sh        # Raspberry Pi deployment script (idempotent)
+├── requirements.txt # Python dependencies
+├── templates/       # Jinja2 dashboard template
+└── static/          # Frontend JS + CSS (vanilla, no framework)
+
 homeassistant/
 ├── docker-compose.yml          # HA + InfluxDB 2.7 + Grafana stack
 ├── config/configuration.yaml   # HA sensors, lights, REST commands for EcoGarden
@@ -55,9 +74,20 @@ backup/              # Original device config/code for reference
 docs/FLASHING.md     # Serial and OTA flashing guide
 ```
 
+**Data flow:**
+```
+EcoGarden ESP8266 ──MQTT──► Pi Monitor ──► InfluxDB ──► Grafana
+                                │
+                          Claude API (AI analysis)
+                                │
+                          Flask dashboard (:8080)
+```
+
 **Firmware pattern:** RPC handlers in `main.c` follow: parse JSON args → perform action → send JSON response. HTTP hooks at `/hooks/*` are routed through a single `http_handler()` dispatcher. MQTT handler subscribes to `/devices/{id}/config` and `/devices/{id}/commands/#`.
 
 **TuyaMCU pattern:** The firmware includes a TuyaMCU protocol implementation for communicating with a potential secondary MCU over UART1 (9600 baud, GPIO 13 RX / GPIO 15 TX). Used to attempt feeder control via datapoint commands. MCU detection checked via heartbeat response (header 0x55 0xAA).
+
+**Monitor pattern:** `app.py` creates a shared `state` dict passed to all modules. Scheduler runs background tasks on a `schedule` library thread: capture (every 30min, 06:00-22:00) → timelapse (22:30) → analysis (10:00/18:00) → cleanup (01:00). Config is loaded from `config.yaml`; secrets come from env vars. Analysis output files use `YYYY-MM-DD_HH-MM.json` format (includes time to avoid overwrite on twice-daily runs).
 
 ## Commands
 
@@ -73,6 +103,30 @@ mos flash --port /dev/ttyUSB0
 
 # Note: OTA.Update RPC requires Mongoose OS license, use /update endpoint instead
 ```
+
+## Monitor Commands
+
+```bash
+# Run locally (development)
+cd monitor && python app.py
+
+# Deploy to Raspberry Pi (installs deps, systemd service, starts)
+cd monitor && ./deploy.sh
+
+# On Pi: manage service
+sudo systemctl status ecogarden-monitor
+sudo systemctl restart ecogarden-monitor
+journalctl -u ecogarden-monitor -f
+
+# Set secrets on Pi
+sudo nano /etc/ecogarden-monitor.env   # ANTHROPIC_API_KEY, INFLUXDB_TOKEN
+sudo systemctl restart ecogarden-monitor
+
+# Install Python dependencies (development)
+cd monitor && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+```
+
+Dashboard: http://192.168.1.58:8080 | MJPEG stream: http://192.168.1.58:8080/stream
 
 ## Home Assistant API
 
@@ -189,7 +243,7 @@ The config provides:
 - Feed fish button (sends TuyaMCU command)
 - InfluxDB time-series storage for sensor data
 - Grafana dashboard for EcoGarden monitoring
-- Automations: light schedule (06:00-22:00), feeding (08:00 + 18:00), temp/light alerts
+- Automations: growlight sunrise/sunset ramp (06:00-07:00 up, 20:30-22:00 down), feeding (08:00 + 18:00), temp/light alerts
 
 ## WiFi Provisioning
 
