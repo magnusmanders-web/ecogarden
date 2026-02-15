@@ -51,10 +51,14 @@ class MQTTClient:
             return
 
         with self._lock:
-            if "temp" in payload:
-                self._sensor_data["temp_c"] = payload["temp"]
-            if "temperature" in payload:
+            if "water_temperature" in payload:
+                self._sensor_data["temp_c"] = payload["water_temperature"]
+            elif "temperature" in payload:
                 self._sensor_data["temp_c"] = payload["temperature"]
+            elif "temp" in payload:
+                self._sensor_data["temp_c"] = payload["temp"]
+            if "lux" in payload:
+                self._sensor_data["lux"] = payload["lux"]
 
     def start(self):
         """Connect to broker and start the network loop in a background thread."""

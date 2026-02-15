@@ -13,7 +13,7 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 - **Device ID:** esp8266_5A604B
 - **MAC:** 8EAAB55A604B
 - **IP:** 192.168.1.196
-- **Firmware:** v1.1.0 (custom Mongoose OS 2.20.0)
+- **Firmware:** v1.3.0 (custom Mongoose OS 2.20.0)
 - **MQTT broker:** 192.168.1.5:1883
 - **WiFi:** Configured via web portal (no hardcoded credentials)
 
@@ -22,13 +22,13 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 **Working:**
 - LED/Growlight control (GPIO 4) via HTTP and MQTT
 - Light sensor (TSL2561 on I2C 0x39) - real lux values
+- Water temperature sensor (DS18B20 on GPIO 13) - real readings (~25°C)
 - Home Assistant integration at ~/homeassistant
 - OTA firmware updates via /update endpoint
-- TuyaMCU UART communication (sends commands, no MCU response detected yet)
+- RPi plant monitor dashboard with live temperature
 
 **Not working / Unknown:**
-- Feeder servo - GPIO unknown, extensive testing failed (see investigation below)
-- Temperature sensor - not on I2C, likely 1-Wire DS18B20, returns placeholder 24.75°C (1-Wire lib disabled to save memory for OTA)
+- Feeder - GPIO 15 pulse test added (was UART1 TX), physical inspection still needed
 
 **Not needed:**
 - Pump - runs continuously when powered, no control required
@@ -37,7 +37,7 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 
 ```
 firmware/
-├── src/main.c       # C firmware: RPC handlers, MQTT pub/sub, GPIO, TuyaMCU
+├── src/main.c       # C firmware: RPC handlers, MQTT pub/sub, GPIO, DS18B20
 ├── mos.yml          # Mongoose OS config (not in git - contains credentials)
 ├── mos.yml.example  # Template config (in git)
 └── fs/index.html    # WiFi provisioning web UI served by device
@@ -84,8 +84,6 @@ EcoGarden ESP8266 ──MQTT──► Pi Monitor ──► InfluxDB ──► Gr
 ```
 
 **Firmware pattern:** RPC handlers in `main.c` follow: parse JSON args → perform action → send JSON response. HTTP hooks at `/hooks/*` are routed through a single `http_handler()` dispatcher. MQTT handler subscribes to `/devices/{id}/config` and `/devices/{id}/commands/#`.
-
-**TuyaMCU pattern:** The firmware includes a TuyaMCU protocol implementation for communicating with a potential secondary MCU over UART1 (9600 baud, GPIO 13 RX / GPIO 15 TX). Used to attempt feeder control via datapoint commands. MCU detection checked via heartbeat response (header 0x55 0xAA).
 
 **Monitor pattern:** `app.py` creates a shared `state` dict passed to all modules. Scheduler runs background tasks on a `schedule` library thread: capture (every 30min, 06:00-22:00) → timelapse (22:30) → analysis (10:00/18:00) → cleanup (01:00). Config is loaded from `config.yaml`; secrets come from env vars. Analysis output files use `YYYY-MM-DD_HH-MM.json` format (includes time to avoid overwrite on twice-daily runs).
 
@@ -135,13 +133,13 @@ HTTP endpoints compatible with original EcoGarden firmware (use with farstreet/H
 ```bash
 # Sensors
 curl http://192.168.1.196/hooks/light_sensor        # {"value": 0.0-1.0}
-curl http://192.168.1.196/hooks/water_temperature   # {"value": 24.75}
+curl http://192.168.1.196/hooks/water_temperature   # {"value": 25.38} (real DS18B20)
 
 # LED control (value: 0.0-1.0)
 curl "http://192.168.1.196/hooks/set_led_brightness?value=0.8"
 curl "http://192.168.1.196/hooks/set_automatic_led_brightness?value=1"
 
-# Feeder (attempts TuyaMCU command)
+# Feeder (pulses GPIO 15 HIGH for 2 seconds)
 curl http://192.168.1.196/hooks/feed_now
 ```
 
@@ -153,15 +151,9 @@ curl http://192.168.1.196/rpc/LED.Set -d '{"state":true}'
 curl http://192.168.1.196/rpc/LED.Toggle
 curl http://192.168.1.196/rpc/LED.Get
 
-# TuyaMCU / secondary MCU (for feeder investigation)
-curl http://192.168.1.196/rpc/MCU.Heartbeat      # Detect MCU presence
-curl http://192.168.1.196/rpc/MCU.Query           # Query MCU state
-curl http://192.168.1.196/rpc/MCU.SendDP -d '{"dpid":1,"value":1}'  # Send datapoint
-curl http://192.168.1.196/rpc/MCU.Feed            # Trigger feeder (tries dpIds 1,3,101-104)
-
-# Temperature sensor (1-Wire disabled, returns placeholder)
-curl http://192.168.1.196/rpc/Temp.Scan
-curl http://192.168.1.196/rpc/Temp.Read
+# Temperature sensor (DS18B20 on GPIO 13, auto-initialized at boot)
+curl http://192.168.1.196/rpc/Temp.Scan           # Re-scan 1-Wire bus
+curl http://192.168.1.196/rpc/Temp.Read            # Read current temperature
 
 # GPIO testing (for discovering unknown pins)
 curl "http://192.168.1.196/rpc/GPIO.Write?pin=4&value=1"
@@ -182,49 +174,35 @@ mosquitto_pub -h localhost -t '/devices/esp8266_5A604B/config' -m '{"led":1}'
 | Button | 0 | Confirmed |
 | I2C SDA | 12 | Confirmed |
 | I2C SCL | 14 | Confirmed |
-| UART1 RX (MCU) | 13 | TuyaMCU communication, 9600 baud |
-| UART1 TX (MCU) | 15 | TuyaMCU communication, 9600 baud |
+| Temp sensor (DS18B20) | 13 | Working - 1-Wire, addr 28:FF:67:4F:75:A0:4C:A3 |
+| Feeder (test) | 15 | Pulse test added, physical inspection needed |
 | Lux sensor | I2C 0x39 | TSL2561 - working via /hooks/light_sensor |
 | Pump | N/A | Runs continuously when powered, no control needed |
-| Feeder | Unknown | See investigation notes below |
-| Temp sensor | 5 (configured, disabled) | 1-Wire DS18B20, lib disabled to save memory |
+
+### Temperature Sensor Discovery (Feb 2026)
+
+GPIO 13 was originally configured as UART1 RX for TuyaMCU communication. A full-GPIO 1-Wire scan discovered a DS18B20 temperature sensor on GPIO 13 (address `28:FF:67:4F:75:A0:4C:A3`). The TuyaMCU assumption was a red herring - there is no secondary MCU. The DS18B20 is now auto-initialized at boot and reads every 5 seconds.
 
 ### Feeder Investigation (Feb 2026)
 
-**APK Analysis (EcoGarden App v1.2):**
-Decompiled the Android app and found the feeder control architecture:
+**APK Analysis:** Feeder was cloud-only via Firebase/GCP IoT Core. No local `/hooks/feed_now` endpoint existed in the original firmware.
 
-```
-App → Firebase → GCP IoT Core → MQTT → ESP8266 → GPIO → Feeder
-```
+**Testing done:**
+- GPIO 1,2,3,5,9,10,16 tested with servo PWM, DC pulses, active-low - nothing moved
+- GPIO 13 turned out to be DS18B20 temp sensor (not UART1 RX)
+- GPIO 15 (was UART1 TX) now has a pulse test in `/hooks/feed_now` - untested physically
+- I2C scan: only TSL2561 (0x39), no motor driver ICs
+- TuyaMCU heartbeat/datapoint commands: no response (there is no secondary MCU)
+- Original firmware not recoverable from OTA slot
 
-Firebase paths used:
-- `device/{deviceId}/component/feeder/feed_now` = true (triggers feed)
-- `device/{deviceId}/component/feeder/schedule` (feeding schedule)
-- `device/{deviceId}/component/feeder/automatic_feeding` (auto mode)
-- `device/{deviceId}/component/feeder/history` (feed history)
-
-**Key finding:** No local `/hooks/feed_now` endpoint ever existed in the original firmware. The feeder was **cloud-only** via Firebase/GCP IoT Core. The endpoint was "still being created" according to farstreet repo - it was never finished.
-
-**Device-level testing:**
-- **Original firmware** (`backup/init.js`, `backup/config.json`) only has LED control - no feeder code or GPIO
-- **I2C scan** found only TSL2561 (0x39) - no motor driver ICs at common addresses (0x0F, 0x20-0x27, 0x38-0x3F, 0x40, 0x60, 0x68)
-- **GPIO tested**: 1,2,3,5,9,10,13,15,16 with servo PWM, DC pulses, active-low - nothing moved
-- **TuyaMCU tested**: Heartbeat/datapoint commands sent over UART1 - no response detected
-- **OTA revert**: Slot 0 checked but original firmware not recoverable
-- **Ecobloom contact** (hello@ecobloom.se) - unresponsive
-
-**Conclusion:** The original firmware binary (which contained the GPIO→feeder mapping) was overwritten when we flashed custom firmware. The GPIO pin cannot be recovered via software. Physical inspection required.
-
-**Next step:** Photograph internals during tank maintenance to trace feeder wiring
+**Next step:** Photograph internals during tank maintenance to trace feeder wiring, test GPIO 15 pulse physically
 
 ## Config Schema
 
 Custom settings in `mos.yml` under `ecogarden.*`:
 - `ecogarden.led_pin` (int, default 4) - LED/growlight GPIO
 - `ecogarden.sensor_interval_ms` (int, default 5000) - MQTT sensor publish interval
-- `ecogarden.mcu_uart` (int, default 1) - UART number for TuyaMCU communication
-- `ecogarden.onewire_pin` (int, default 5) - 1-Wire GPIO for DS18B20 (currently disabled in code)
+- `ecogarden.onewire_pin` (int, default 13) - 1-Wire GPIO for DS18B20
 
 ## Home Assistant Setup
 
@@ -240,7 +218,7 @@ Example HA config for EcoGarden: `./homeassistant/` (in this repo)
 The config provides:
 - Light sensor (0-100%) and water temperature sensor
 - Growlight on/off control and auto brightness toggle
-- Feed fish button (sends TuyaMCU command)
+- Feed fish button (pulses GPIO 15)
 - InfluxDB time-series storage for sensor data
 - Grafana dashboard for EcoGarden monitoring
 - Automations: growlight sunrise/sunset ramp (06:00-07:00 up, 20:30-22:00 down), feeding (08:00 + 18:00), temp/light alerts
@@ -263,8 +241,7 @@ The firmware supports WiFi configuration via a captive portal - no hardcoded cre
 
 ## TODO
 
-1. **Feeder:** Photograph internals during maintenance, trace feeder wiring to identify control method
-2. **Temp sensor:** May be 1-Wire DS18B20, not visible in tank. Re-enable 1-Wire lib once confirmed (disabled to save memory for OTA)
+1. **Feeder:** Photograph internals during maintenance, trace feeder wiring. GPIO 15 pulse test is ready (`/hooks/feed_now`), needs physical verification.
 
 ## When Photos Are Available
 
@@ -273,11 +250,9 @@ When you have photos of the internals, look for and document:
 1. **Main PCB** - Identify ESP8266 module, trace all wires
 2. **Feeder motor** - What type? (servo with 3 wires, DC motor with 2, stepper with 4+)
 3. **Motor driver** - Any IC near the motor? (L298N, DRV8833, TB6612, etc.)
-4. **Secondary PCB** - Is there another microcontroller board?
-5. **Wire colors** - Which wires go from feeder to main board, and to which pins?
-6. **Temp sensor** - Look for small probe with 3 wires (DS18B20) or 2 wires (thermistor)
+4. **Wire colors** - Which wires go from feeder to main board, and to which pins?
+5. **Confirm DS18B20** - Should be visible as small probe with 3 wires on GPIO 13
 
-**To add feeder support once GPIO is found:**
-1. Edit `firmware/src/main.c` - add GPIO control in `hook_feed_now()` function (line ~402)
-2. Add to `mos.yml` config schema: `ecogarden.feeder_pin`
-3. Build and OTA flash: `cd firmware && mos build --platform esp8266 && curl -F "file=@build/fw.zip" http://192.168.1.196/update`
+**To update feeder GPIO once confirmed:**
+1. Edit `firmware/src/main.c` - update `s_feeder_pin` in `mgos_app_init()` (currently GPIO 15)
+2. Build and OTA flash: `cd firmware && mos build --platform esp8266 && curl -F "file=@build/fw.zip" http://192.168.1.196/update`
