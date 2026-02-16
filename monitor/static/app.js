@@ -10,15 +10,17 @@ document.addEventListener("DOMContentLoaded", () => {
   loadLightState();
   loadStorageStats();
   loadLightHistory("24h");
+  loadTempHistory();
 
   setInterval(loadStatus, 60000);
+  setInterval(loadTempHistory, 60000);
   setInterval(loadLatestPhoto, 300000);
 
   // Aquatic friends (desktop only) — delay so page renders first
   setTimeout(initFish, 2500);
-  setTimeout(initBuddy, 18000);
-  setTimeout(spawnTurtle, 45000);
-  setTimeout(spawnShark, 80000);
+  setTimeout(initBuddy, 10000);
+  setTimeout(spawnTurtle, 35000);
+  setTimeout(spawnShark, 70000);
 });
 
 // --- Data ---
@@ -267,6 +269,84 @@ function renderLightChart(svg, points, range) {
     } else {
       label = (t.getMonth() + 1) + "/" + t.getDate();
     }
+    html += '<text x="' + x + '" y="' + (h - 4) + '" text-anchor="middle" fill="#4a6b52" font-size="10" font-family="DM Sans, sans-serif">' + label + "</text>";
+  }
+
+  svg.innerHTML = html;
+}
+
+// --- Temperature History Chart ---
+
+function loadTempHistory() {
+  fetch("/api/sensors/temp/history")
+    .then((r) => r.json())
+    .then((data) => {
+      const svg = document.getElementById("temp-chart");
+      const noData = document.getElementById("temp-no-data");
+
+      if (!data.points || data.points.length < 2) {
+        svg.style.display = "none";
+        noData.style.display = "block";
+        return;
+      }
+
+      svg.style.display = "block";
+      noData.style.display = "none";
+      renderTempChart(svg, data.points);
+    })
+    .catch(() => {});
+}
+
+function renderTempChart(svg, points) {
+  const w = 600, h = 200;
+  const padLeft = 40, padRight = 10, padTop = 10, padBottom = 28;
+  const chartW = w - padLeft - padRight;
+  const chartH = h - padTop - padBottom;
+
+  const values = points.map((p) => p.value);
+  const minVal = Math.floor(Math.min(...values) - 0.5);
+  const maxVal = Math.ceil(Math.max(...values) + 0.5);
+  const range = maxVal - minVal || 1;
+
+  const coords = points.map((p, i) => {
+    const x = padLeft + (i / (points.length - 1)) * chartW;
+    const y = padTop + chartH - ((p.value - minVal) / range) * chartH;
+    return { x, y };
+  });
+
+  const linePoints = coords.map((c) => c.x + "," + c.y).join(" ");
+  const areaPath = "M" + coords[0].x + "," + (padTop + chartH) +
+    " L" + coords.map((c) => c.x + "," + c.y).join(" L") +
+    " L" + coords[coords.length - 1].x + "," + (padTop + chartH) + " Z";
+
+  let html = "";
+
+  html += '<defs><linearGradient id="tempAreaGrad" x1="0" y1="0" x2="0" y2="1">';
+  html += '<stop offset="0%" stop-color="rgba(52,152,219,0.25)"/>';
+  html += '<stop offset="100%" stop-color="rgba(52,152,219,0.02)"/>';
+  html += '</linearGradient></defs>';
+
+  // Grid lines and Y labels
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const val = minVal + (range * i) / steps;
+    const y = padTop + chartH - (i / steps) * chartH;
+    html += '<line x1="' + padLeft + '" y1="' + y + '" x2="' + (w - padRight) + '" y2="' + y + '" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>';
+    html += '<text x="' + (padLeft - 4) + '" y="' + (y + 3) + '" text-anchor="end" fill="#4a6b52" font-size="10" font-family="DM Sans, sans-serif">' + val.toFixed(1) + "\u00b0</text>";
+  }
+
+  html += '<path d="' + areaPath + '" fill="url(#tempAreaGrad)"/>';
+  html += '<polyline points="' + linePoints + '" fill="none" stroke="#3498db" stroke-width="1.8" stroke-linejoin="round"/>';
+  html += '<polyline points="' + linePoints + '" fill="none" stroke="#3498db" stroke-width="4" stroke-linejoin="round" opacity="0.15" filter="blur(3px)"/>';
+
+  // Time labels
+  const labelCount = 5;
+  for (let i = 0; i < labelCount; i++) {
+    const idx = Math.round((i / (labelCount - 1)) * (points.length - 1));
+    const p = points[idx];
+    const x = coords[idx].x;
+    const t = new Date(p.time);
+    const label = t.getHours().toString().padStart(2, "0") + ":" + t.getMinutes().toString().padStart(2, "0");
     html += '<text x="' + x + '" y="' + (h - 4) + '" text-anchor="middle" fill="#4a6b52" font-size="10" font-family="DM Sans, sans-serif">' + label + "</text>";
   }
 
@@ -902,13 +982,16 @@ function initBuddy() {
 
   const el = document.createElement("div");
   el.className = "buddy";
+  el.style.display = "block";
+  el.style.left = "0px";
+  el.style.top = "0px";
   el.innerHTML = '<div class="buddy-body">' + buddySvg + '</div><div class="buddy-speech"></div>';
   el.onclick = buddyClick;
   document.body.appendChild(el);
   buddy.el = el;
 
-  // Enter from the left
-  buddy.x = -60;
+  // Start at left edge, swim toward Bubbles
+  buddy.x = 30;
   buddy.y = window.innerHeight * 0.6;
   buddy.el.style.transform = "translate(" + buddy.x + "px," + buddy.y + "px)";
 
@@ -916,6 +999,7 @@ function initBuddy() {
   buddy.ty = window.innerHeight * 0.5;
   buddy.facingLeft = false;
   buddy.moving = true;
+  buddy.speed = 1;
 
   buddy.frame = requestAnimationFrame(buddyLoop);
   scheduleBuddyQuote();
@@ -1014,7 +1098,7 @@ const turtleQuotes = [
 let turtleTimer = null;
 
 function scheduleTurtle() {
-  turtleTimer = setTimeout(spawnTurtle, 60000 + Math.random() * 60000);
+  turtleTimer = setTimeout(spawnTurtle, 45000 + Math.random() * 45000);
 }
 
 function spawnTurtle() {
@@ -1022,6 +1106,9 @@ function spawnTurtle() {
 
   const el = document.createElement("div");
   el.className = "sea-turtle";
+  el.style.display = "block";
+  el.style.left = "0px";
+  el.style.top = "0px";
 
   const quote = turtleQuotes[Math.floor(Math.random() * turtleQuotes.length)];
   el.innerHTML = '<div class="turtle-body">' + turtleSvg + '</div><div class="turtle-speech">' + quote + '</div>';
@@ -1078,7 +1165,7 @@ let sharkTimer = null;
 let sharkKills = 0;
 
 function scheduleShark() {
-  sharkTimer = setTimeout(spawnShark, 80000 + Math.random() * 60000);
+  sharkTimer = setTimeout(spawnShark, 60000 + Math.random() * 60000);
 }
 
 function spawnShark() {
@@ -1087,6 +1174,9 @@ function spawnShark() {
   shark.active = true;
   const el = document.createElement("div");
   el.className = "shark";
+  el.style.display = "block";
+  el.style.left = "0px";
+  el.style.top = "0px";
   el.innerHTML = '<div class="shark-glow"></div><div class="shark-body">' + sharkSvg + '</div>';
   el.onclick = killShark;
   document.body.appendChild(el);

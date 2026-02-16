@@ -40,6 +40,18 @@ def create_app(config, state):
             except Exception:
                 pass
 
+        # Record temperature for history graph
+        if sensors.get("temp_c") is not None:
+            from datetime import datetime, timezone
+            history = state.setdefault("temp_history", [])
+            history.append({
+                "time": datetime.now(timezone.utc).isoformat(),
+                "value": sensors["temp_c"],
+            })
+            # Keep last 24h at ~60s intervals
+            if len(history) > 1440:
+                history.pop(0)
+
         # Load latest analysis
         from analyzer import _load_previous_analysis
         analysis = _load_previous_analysis(config)
@@ -339,6 +351,14 @@ from(bucket: "{influx['bucket']}")
         except Exception as e:
             log.warning("InfluxDB light history query failed: %s", e)
             return jsonify({"range": range_param, "points": [], "error": str(e)})
+
+    # --- Feature: Temperature History ---
+
+    @app.route("/api/sensors/temp/history")
+    def api_temp_history():
+        """Return buffered temperature readings for the chart."""
+        history = state.get("temp_history", [])
+        return jsonify({"points": history})
 
     # --- Feature: On-demand Timelapse Generation ---
 

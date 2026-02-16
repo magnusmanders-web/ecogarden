@@ -115,6 +115,20 @@
       </div>
     </section>
 
+    <!-- Temperature History -->
+    <section class="card glass-card light-card anim-rise" style="--d:3">
+      <div class="card-header">
+        <h2>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" class="card-icon"><path d="M10 2a2 2 0 00-2 2v7.252A3 3 0 1013 14V4a2 2 0 00-2-2zm0 2v7.252a1 1 0 01-.293.708A1 1 0 009 12.5a1.5 1.5 0 102.121.621A1 1 0 0111 12.5V4a1 1 0 10-2 0h1z"/></svg>
+          Water Temperature
+        </h2>
+      </div>
+      <div class="light-chart-container">
+        <svg id="temp-chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+        <div id="temp-no-data" class="no-data">Collecting data...</div>
+      </div>
+    </section>
+
     <!-- Timelapse -->
     <section class="card glass-card timelapse-card anim-rise" style="--d:4">
       <div class="card-header">
