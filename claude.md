@@ -14,7 +14,7 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 - **MAC:** 8EAAB55A604B
 - **IP:** 192.168.1.196
 - **Firmware:** v1.3.0 (custom Mongoose OS 2.20.0)
-- **MQTT broker:** 192.168.1.5:1883
+- **MQTT broker:** 192.168.1.5:1883 (currently down — monitor uses HTTP fallback)
 - **WiFi:** Configured via web portal (no hardcoded credentials)
 
 ## Current Status (Feb 2026)
@@ -25,10 +25,14 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 - Water temperature sensor (DS18B20 on GPIO 13) - real readings (~25°C)
 - Home Assistant integration at ~/homeassistant
 - OTA firmware updates via /update endpoint
-- RPi plant monitor dashboard with live temperature
+- RPi plant monitor dashboard with live temperature, temp chart, light history
+- Photo capture every 30min with timelapse generation (daily/weekly/all-photos)
+- AI plant health analysis via Claude API (twice daily)
+- Dashboard creature animations (koi fish, sea turtle, shark)
 
 **Not working / Unknown:**
 - Feeder - GPIO 15 pulse test added (was UART1 TX), physical inspection still needed
+- MQTT broker at 192.168.1.5 - currently not running, monitor falls back to direct HTTP
 
 **Not needed:**
 - Pump - runs continuously when powered, no control required
@@ -77,8 +81,8 @@ docs/FLASHING.md     # Serial and OTA flashing guide
 **Data flow:**
 ```
 EcoGarden ESP8266 ──MQTT──► Pi Monitor ──► InfluxDB ──► Grafana
-                                │
-                          Claude API (AI analysis)
+        │                       │
+        └──HTTP fallback──►     ├── Claude API (AI analysis)
                                 │
                           Flask dashboard (:8080)
 ```
@@ -86,6 +90,8 @@ EcoGarden ESP8266 ──MQTT──► Pi Monitor ──► InfluxDB ──► Gr
 **Firmware pattern:** RPC handlers in `main.c` follow: parse JSON args → perform action → send JSON response. HTTP hooks at `/hooks/*` are routed through a single `http_handler()` dispatcher. MQTT handler subscribes to `/devices/{id}/config` and `/devices/{id}/commands/#`.
 
 **Monitor pattern:** `app.py` creates a shared `state` dict passed to all modules. Scheduler runs background tasks on a `schedule` library thread: capture (every 30min, 06:00-22:00) → timelapse (22:30) → analysis (10:00/18:00) → cleanup (01:00). Config is loaded from `config.yaml`; secrets come from env vars. Analysis output files use `YYYY-MM-DD_HH-MM.json` format (includes time to avoid overwrite on twice-daily runs).
+
+**Dashboard features:** Temperature history chart (in-memory buffer, up to 1440 points/24h), light sensor history (InfluxDB Flux queries), photo gallery with date browsing, timelapse viewer with on-demand generation, plant health cards with growth stage progress, growlight toggle. Creature animations: Gill the koi fish, sea turtle, shark attack easter egg. Frontend is vanilla JS with SVG charts — no framework.
 
 ## Commands
 
@@ -125,6 +131,19 @@ cd monitor && python3 -m venv venv && source venv/bin/activate && pip install -r
 ```
 
 Dashboard: http://192.168.1.58:8080 | MJPEG stream: http://192.168.1.58:8080/stream
+
+**Manual deploy to Pi (when deploy.sh isn't suitable):**
+```bash
+sshpass -p 'REDACTED' scp monitor/web.py pi@192.168.1.58:/home/pi/ecogarden/monitor/
+sshpass -p 'REDACTED' scp monitor/static/app.js pi@192.168.1.58:/home/pi/ecogarden/monitor/static/
+sshpass -p 'REDACTED' scp monitor/templates/index.html pi@192.168.1.58:/home/pi/ecogarden/monitor/templates/
+sshpass -p 'REDACTED' ssh pi@192.168.1.58 "sudo systemctl restart ecogarden-monitor"
+```
+
+**Ad-hoc timelapse from all photos:**
+```bash
+sshpass -p 'REDACTED' ssh pi@192.168.1.58 "find /home/pi/ecogarden/monitor/photos -name '*.jpg' | sort > /tmp/tl.txt && ffmpeg -y -f concat -safe 0 -i <(awk '{print \"file \x27\" \$0 \"\x27\"}' /tmp/tl.txt) -vf 'scale=1280:-2' -r 15 -c:v libx264 -pix_fmt yuv420p -preset fast /home/pi/ecogarden/monitor/timelapse/daily/all-photos-timelapse.mp4"
+```
 
 ## Home Assistant API
 
@@ -239,9 +258,16 @@ The firmware supports WiFi configuration via a captive portal - no hardcoded cre
 - If device can't connect (e.g., wrong password, network changed), it falls back to AP mode after 15 seconds
 - Or factory reset: Connect via serial and run `mos config-set wifi.sta.ssid="" wifi.sta.pass=""`
 
+## Current Plants (planted 2026-02-08)
+
+- **Greek Oregano** (left position) - sprout stage
+- **Fine-leaf Basil** (center position) - sprout stage, leading in growth
+- **Lettuce** (right position) - seedling stage, sensitive to water temp >24°C
+
 ## TODO
 
 1. **Feeder:** Photograph internals during maintenance, trace feeder wiring. GPIO 15 pulse test is ready (`/hooks/feed_now`), needs physical verification.
+2. **MQTT broker:** Investigate why broker at 192.168.1.5 is down. Monitor works via HTTP fallback but loses real-time sensor push.
 
 ## When Photos Are Available
 
