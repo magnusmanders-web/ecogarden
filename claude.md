@@ -93,10 +93,10 @@ sudo nano /etc/ecogarden-monitor.env   # ANTHROPIC_API_KEY, INFLUXDB_TOKEN
 ### Manual Deploy to Pi
 
 ```bash
-sshpass -p 'REDACTED' scp monitor/web.py pi@192.168.1.58:/home/pi/ecogarden/monitor/
-sshpass -p 'REDACTED' scp monitor/static/app.js pi@192.168.1.58:/home/pi/ecogarden/monitor/static/
-sshpass -p 'REDACTED' scp monitor/templates/index.html pi@192.168.1.58:/home/pi/ecogarden/monitor/templates/
-sshpass -p 'REDACTED' ssh pi@192.168.1.58 "sudo systemctl restart ecogarden-monitor"
+sshpass -p '$PI_PASSWORD' scp monitor/web.py pi@$PI_IP:/home/pi/ecogarden/monitor/
+sshpass -p '$PI_PASSWORD' scp monitor/static/app.js pi@$PI_IP:/home/pi/ecogarden/monitor/static/
+sshpass -p '$PI_PASSWORD' scp monitor/templates/index.html pi@$PI_IP:/home/pi/ecogarden/monitor/templates/
+sshpass -p '$PI_PASSWORD' ssh pi@$PI_IP "sudo systemctl restart ecogarden-monitor"
 ```
 
 ### Home Assistant
