@@ -244,6 +244,18 @@ def create_app(config, state):
         except Exception:
             return jsonify({"error": "Device unreachable"}), 503
 
+    @app.route("/api/feed", methods=["POST"])
+    def api_feed():
+        """Trigger the EcoGarden fish feeder."""
+        import urllib.request
+        try:
+            with urllib.request.urlopen(
+                f"http://{config['ecogarden']['device_ip']}/hooks/feed_now", timeout=5
+            ) as resp:
+                return Response(resp.read(), mimetype="application/json")
+        except Exception:
+            return jsonify({"error": "Device unreachable"}), 503
+
     @app.route("/capture", methods=["POST"])
     def manual_capture():
         """Trigger a manual photo capture."""

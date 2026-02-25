@@ -204,6 +204,18 @@ header h1 {
 
 .ctrl-btn.light-off { opacity: 0.5 }
 
+.ctrl-btn.feeding {
+  background: rgba(46,204,113,0.18);
+  border-color: rgba(46,204,113,0.4);
+  color: var(--green);
+  animation: feed-pulse 0.6s ease-in-out 3;
+}
+
+@keyframes feed-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(46,204,113,0.15); transform: scale(1) }
+  50% { box-shadow: 0 0 24px rgba(46,204,113,0.35); transform: scale(1.1) }
+}
+
 /* ---- Main ---- */
 
 main {

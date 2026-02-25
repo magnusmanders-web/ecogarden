@@ -615,6 +615,24 @@ function toggleLight() {
     });
 }
 
+function feedNow() {
+  const btn = document.getElementById("feed-btn");
+  btn.disabled = true;
+  btn.classList.add("feeding");
+  fetch("/api/feed", { method: "POST" })
+    .then((r) => r.json())
+    .then(() => {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.classList.remove("feeding");
+      }, 2000);
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.classList.remove("feeding");
+    });
+}
+
 function manualCapture() {
   const btn = document.getElementById("capture-btn");
   btn.disabled = true;
