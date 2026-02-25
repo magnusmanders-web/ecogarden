@@ -215,5 +215,6 @@ MIT
 
 ## Acknowledgments
 
+- **Hamza, founder of Ecobloom** — generously provided internal schematics and hardware diagrams that made discovering the feeder, temperature sensor, and water level switch wiring possible
 - Original EcoGarden by [Ecobloom](https://ecobloom.se/)
 - Home Assistant integration inspired by [farstreet/HA_ecobloom_ecogarden](https://github.com/farstreet/HA_ecobloom_ecogarden)
