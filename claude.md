@@ -30,12 +30,15 @@ Reviving an EcoGarden (Kickstarter by Ecobloom) after their cloud service was de
 - AI plant health analysis via Claude API (twice daily)
 - Dashboard creature animations (koi fish, sea turtle, shark)
 
+**Working:**
+- Feeder (GPIO 1 / TX0) - confirmed via audible testing, pulses DC motor
+
 **Not working / Unknown:**
-- Feeder - GPIO 15 pulse test added (was UART1 TX), physical inspection still needed
 - MQTT broker at 192.168.1.5 - currently not running, monitor falls back to direct HTTP
 
 **Not needed:**
 - Pump - runs continuously when powered, no control required
+- Water level microswitches - hardwired inline with pump circuit as dry-run safety cutoff (not software-readable)
 
 ## Architecture
 
@@ -158,7 +161,7 @@ curl http://192.168.1.196/hooks/water_temperature   # {"value": 25.38} (real DS1
 curl "http://192.168.1.196/hooks/set_led_brightness?value=0.8"
 curl "http://192.168.1.196/hooks/set_automatic_led_brightness?value=1"
 
-# Feeder (pulses GPIO 15 HIGH for 2 seconds)
+# Feeder (pulses GPIO 1 HIGH for 2 seconds)
 curl http://192.168.1.196/hooks/feed_now
 ```
 
@@ -194,27 +197,33 @@ mosquitto_pub -h localhost -t '/devices/esp8266_5A604B/config' -m '{"led":1}'
 | I2C SDA | 12 | Confirmed |
 | I2C SCL | 14 | Confirmed |
 | Temp sensor (DS18B20) | 13 | Working - 1-Wire, addr 28:FF:67:4F:75:A0:4C:A3 |
-| Feeder (test) | 15 | Pulse test added, physical inspection needed |
+| Feeder | 1 (TX0) | Working - confirmed via audible test, 2s HIGH pulse |
 | Lux sensor | I2C 0x39 | TSL2561 - working via /hooks/light_sensor |
 | Pump | N/A | Runs continuously when powered, no control needed |
+| Water level microswitches | N/A | Hardwired inline with pump circuit (dry-run safety, not GPIO-connected) |
 
 ### Temperature Sensor Discovery (Feb 2026)
 
 GPIO 13 was originally configured as UART1 RX for TuyaMCU communication. A full-GPIO 1-Wire scan discovered a DS18B20 temperature sensor on GPIO 13 (address `28:FF:67:4F:75:A0:4C:A3`). The TuyaMCU assumption was a red herring - there is no secondary MCU. The DS18B20 is now auto-initialized at boot and reads every 5 seconds.
 
-### Feeder Investigation (Feb 2026)
+### Feeder Discovery (Feb 2026)
 
-**APK Analysis:** Feeder was cloud-only via Firebase/GCP IoT Core. No local `/hooks/feed_now` endpoint existed in the original firmware.
+**GPIO 1 (TX0) confirmed** as feeder pin via audible testing — motor sound heard on each pulse. This was hidden because UART0 TX was used for serial logging in development, masking feeder signals.
 
 **Testing done:**
-- GPIO 1,2,3,5,9,10,16 tested with servo PWM, DC pulses, active-low - nothing moved
-- GPIO 13 turned out to be DS18B20 temp sensor (not UART1 RX)
-- GPIO 15 (was UART1 TX) now has a pulse test in `/hooks/feed_now` - untested physically
-- I2C scan: only TSL2561 (0x39), no motor driver ICs
-- TuyaMCU heartbeat/datapoint commands: no response (there is no secondary MCU)
-- Original firmware not recoverable from OTA slot
+- GPIO 15, 5, 2, 16, 3 — no motor response
+- GPIO 1 (TX0) — motor sound confirmed on HIGH pulse, reproducible
+- Feeder is a simple DC motor: HIGH = on, LOW = off, 2-second pulse per feeding
 
-**Next step:** Photograph internals during tank maintenance to trace feeder wiring, test GPIO 15 pulse physically
+**Original firmware:** Feeder was cloud-only via Firebase/GCP IoT Core. No local `/hooks/feed_now` endpoint existed.
+
+### Water Level Microswitches (Feb 2026)
+
+**From founder schematics:** Two 1P2T microswitches (2A 24V DC) with COM + N.O. wiring to 2-pin JST connectors.
+
+**Testing:** GPIO monitoring during water level change (low → normal) showed no state changes on any available GPIO (2, 3, 5, 16). GPIO 9/10 inaccessible (flash-connected).
+
+**Conclusion:** Microswitches are hardwired inline with the pump power circuit as a dry-run safety cutoff. When water drops below the switch level, the circuit opens and cuts pump power. Not software-readable — purely electrical protection.
 
 ## Config Schema
 
@@ -237,7 +246,7 @@ Example HA config for EcoGarden: `./homeassistant/` (in this repo)
 The config provides:
 - Light sensor (0-100%) and water temperature sensor
 - Growlight on/off control and auto brightness toggle
-- Feed fish button (pulses GPIO 15)
+- Feed fish button (pulses GPIO 1)
 - InfluxDB time-series storage for sensor data
 - Grafana dashboard for EcoGarden monitoring
 - Automations: growlight sunrise/sunset ramp (06:00-07:00 up, 20:30-22:00 down), feeding (08:00 + 18:00), temp/light alerts
@@ -266,19 +275,6 @@ The firmware supports WiFi configuration via a captive portal - no hardcoded cre
 
 ## TODO
 
-1. **Feeder:** Photograph internals during maintenance, trace feeder wiring. GPIO 15 pulse test is ready (`/hooks/feed_now`), needs physical verification.
-2. **MQTT broker:** Investigate why broker at 192.168.1.5 is down. Monitor works via HTTP fallback but loses real-time sensor push.
-
-## When Photos Are Available
-
-When you have photos of the internals, look for and document:
-
-1. **Main PCB** - Identify ESP8266 module, trace all wires
-2. **Feeder motor** - What type? (servo with 3 wires, DC motor with 2, stepper with 4+)
-3. **Motor driver** - Any IC near the motor? (L298N, DRV8833, TB6612, etc.)
-4. **Wire colors** - Which wires go from feeder to main board, and to which pins?
-5. **Confirm DS18B20** - Should be visible as small probe with 3 wires on GPIO 13
-
-**To update feeder GPIO once confirmed:**
-1. Edit `firmware/src/main.c` - update `s_feeder_pin` in `mgos_app_init()` (currently GPIO 15)
-2. Build and OTA flash: `cd firmware && mos build --platform esp8266 && curl -F "file=@build/fw.zip" http://192.168.1.196/update`
+1. **MQTT broker:** Investigate why broker at 192.168.1.5 is down. Monitor works via HTTP fallback but loses real-time sensor push.
+2. **Feeder tuning:** Test optimal pulse duration for portion control (currently 2 seconds). May need adjustment based on food dispensed per pulse.
+3. **Build and OTA flash** updated firmware with GPIO 1 feeder pin: `cd firmware && mos build --platform esp8266 && curl -F "file=@build/fw.zip" http://192.168.1.196/update`

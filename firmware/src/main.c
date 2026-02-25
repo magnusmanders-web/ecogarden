@@ -4,7 +4,7 @@
  * DS18B20 temperature sensor on GPIO 13
  * TSL2561 light sensor on I2C 0x39
  * Growlight on GPIO 4
- * Feeder test on GPIO 15
+ * Feeder on GPIO 1 (TX0)
  */
 
 #include <math.h>
@@ -476,7 +476,7 @@ static void http_handler(struct mg_connection *c, int ev, void *ev_data, void *u
 enum mgos_app_init_result mgos_app_init(void) {
   // Get config
   s_led_pin = mgos_sys_config_get_ecogarden_led_pin();
-  s_feeder_pin = 15;  // GPIO 15 - freed from UART1, testing for feeder
+  s_feeder_pin = 1;  // GPIO 1 (TX0) - confirmed feeder pin
 
   // Setup LED GPIO and turn on at boot
   mgos_gpio_setup_output(s_led_pin, 1);  // Start with LED on
