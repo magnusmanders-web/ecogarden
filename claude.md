@@ -137,15 +137,16 @@ Dashboard: http://192.168.1.58:8080 | MJPEG stream: http://192.168.1.58:8080/str
 
 **Manual deploy to Pi (when deploy.sh isn't suitable):**
 ```bash
-sshpass -p 'REDACTED' scp monitor/web.py pi@192.168.1.58:/home/pi/ecogarden/monitor/
-sshpass -p 'REDACTED' scp monitor/static/app.js pi@192.168.1.58:/home/pi/ecogarden/monitor/static/
-sshpass -p 'REDACTED' scp monitor/templates/index.html pi@192.168.1.58:/home/pi/ecogarden/monitor/templates/
-sshpass -p 'REDACTED' ssh pi@192.168.1.58 "sudo systemctl restart ecogarden-monitor"
+# Requires PI_SSH_PASSWORD set in your shell env (not committed)
+sshpass -p "$PI_SSH_PASSWORD" scp monitor/web.py pi@192.168.1.58:/home/pi/ecogarden/monitor/
+sshpass -p "$PI_SSH_PASSWORD" scp monitor/static/app.js pi@192.168.1.58:/home/pi/ecogarden/monitor/static/
+sshpass -p "$PI_SSH_PASSWORD" scp monitor/templates/index.html pi@192.168.1.58:/home/pi/ecogarden/monitor/templates/
+sshpass -p "$PI_SSH_PASSWORD" ssh pi@192.168.1.58 "sudo systemctl restart ecogarden-monitor"
 ```
 
 **Ad-hoc timelapse from all photos:**
 ```bash
-sshpass -p 'REDACTED' ssh pi@192.168.1.58 "find /home/pi/ecogarden/monitor/photos -name '*.jpg' | sort > /tmp/tl.txt && ffmpeg -y -f concat -safe 0 -i <(awk '{print \"file \x27\" \$0 \"\x27\"}' /tmp/tl.txt) -vf 'scale=1280:-2' -r 15 -c:v libx264 -pix_fmt yuv420p -preset fast /home/pi/ecogarden/monitor/timelapse/daily/all-photos-timelapse.mp4"
+sshpass -p "$PI_SSH_PASSWORD" ssh pi@192.168.1.58 "find /home/pi/ecogarden/monitor/photos -name '*.jpg' | sort > /tmp/tl.txt && ffmpeg -y -f concat -safe 0 -i <(awk '{print \"file \x27\" \$0 \"\x27\"}' /tmp/tl.txt) -vf 'scale=1280:-2' -r 15 -c:v libx264 -pix_fmt yuv420p -preset fast /home/pi/ecogarden/monitor/timelapse/daily/all-photos-timelapse.mp4"
 ```
 
 ## Home Assistant API
